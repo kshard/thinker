@@ -75,7 +75,6 @@ func main() {
 	)
 
 	// Evaluate expression and receive the result
-	// val, err := agt.Prompt(context.Background(), "3 ** 3 + 4 * 10 = ?")
 	val, err := agt.Prompt(context.Background(), "a gentleman seating on horse")
 	fmt.Printf("==> %v\n%+v\n", err, val)
 }
