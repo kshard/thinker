@@ -4,6 +4,14 @@
   <p align="center"><strong>LLM generative agents for Golang</strong></p>
 
   <p align="center">
+    <!-- Version -->
+    <a href="https://github.com/kshard/thinker/releases">
+      <img src="https://img.shields.io/github/v/tag/kshard/thinker?label=version" />
+    </a>
+    <!-- Documentation -->
+    <a href="https://pkg.go.dev/github.com/kshard/thinker">
+      <img src="https://pkg.go.dev/badge/github.com/kshard/thinker" />
+    </a>
     <!-- Build Status  -->
     <a href="https://github.com/kshard/thinker/actions/">
       <img src="https://github.com/kshard/thinker/workflows/build/badge.svg" />
