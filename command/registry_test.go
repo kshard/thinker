@@ -27,6 +27,12 @@ func TestRegistry(t *testing.T) {
 		)
 	})
 
+	t.Run("Commands", func(t *testing.T) {
+		it.Then(t).Should(
+			it.Seq(r.Commands()).Equal(RETURN),
+		)
+	})
+
 	t.Run("Conflict", func(t *testing.T) {
 		cmd := Return()
 		err := r.Register(cmd)

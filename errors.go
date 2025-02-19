@@ -12,6 +12,7 @@ import "github.com/fogfish/faults"
 
 // Common agents errors
 const (
+	ErrUnknown     = faults.Type("unkown state")
 	ErrAbout       = faults.Type("execution aborted")
 	ErrMaxEpoch    = faults.Safe1[int]("max epoch %d is reached")
 	ErrCmdConflict = faults.Type("command already exists")

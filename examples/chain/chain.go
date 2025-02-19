@@ -93,7 +93,7 @@ func (AgentB) deduct(state thinker.State[string, thinker.CmdOut]) (thinker.Phase
 	// the registry has failed to execute command, we have to supply the feedback to LLM
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
-		prompt.WithTask("Refine the previous workstop step using the feedback below.")
+		prompt.WithTask("Refine the previous workflow step using the feedback below.")
 		prompt.With(state.Feedback)
 
 		return thinker.AGENT_REFINE, prompt, nil
