@@ -63,7 +63,7 @@ func deduct(state thinker.State[string, thinker.CmdOut]) (thinker.Phase, chatter
 		var prompt chatter.Prompt
 		prompt.WithTask("Continue the workflow execution.")
 		prompt.With(
-			chatter.Input("The command has returned:\n", state.Reply.Output),
+			chatter.Blob("The command has returned:\n", state.Reply.Output),
 		)
 
 		return thinker.AGENT_ASK, prompt, nil

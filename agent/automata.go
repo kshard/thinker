@@ -40,8 +40,7 @@ func NewAutomata[A, B any](
 	}
 }
 
-// TODO: Opts Temperature ToP
-func (automata *Automata[A, B]) Prompt(ctx context.Context, input A) (B, error) {
+func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
 	var nul B
 	state := thinker.State[A, B]{Phase: thinker.AGENT_ASK, Epoch: 0, Input: input}
 
