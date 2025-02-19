@@ -1,0 +1,12 @@
+github.com/chewxy/math32 v1.10.1 h1:LFpeY0SLJXeaiej/eIp2L40VYfscTvKh/FSEZ68uMkU=
+github.com/chewxy/math32 v1.10.1/go.mod h1:dOB2rcuFrCn6UHrze36WSLVPKtzPMRAQvBvUwkSsLqs=
+github.com/fogfish/faults v0.3.0 h1:5hXImdtvLpeO/Or8+wCZvxgR70ZsZgsm078cg9GV8N0=
+github.com/fogfish/faults v0.3.0/go.mod h1:y8zvZN2pQUe9vDS7rzz0mAnbdfYMorPOeqxpy83YOCk=
+github.com/fogfish/guid/v2 v2.1.0 h1:oEJHKM4yFOOCmKZdh0oH7eD3mL32n2+1YCc27lXB5rE=
+github.com/fogfish/guid/v2 v2.1.0/go.mod h1:KkZ5T4EE3BqWQJFZBPLSHV/tBe23Xq4KvuPfwtNtepU=
+github.com/fogfish/it/v2 v2.2.1 h1:NuuaENAZka8XiJkEj2Q6THRsHSwleC/BLDux82NvkII=
+github.com/fogfish/it/v2 v2.2.1/go.mod h1:HHwufnTaZTvlRVnSesPl49HzzlMrQtweKbf+8Co/ll4=
+github.com/kshard/chatter v0.4.1 h1:pR/U0yVtPfr+swQGic/fM506Je8EUK18gfo2zC4I0Tc=
+github.com/kshard/chatter v0.4.1/go.mod h1:Pwbm1klpVVRIe/uII+95cpf31dVE4gRz21XZUMpX5n8=
+github.com/kshard/float8 v0.0.3 h1:wMmj/dbbwA8aKo+gZ8SS6MhjuXS9+yXYMlaJZfm77l0=
+github.com/kshard/float8 v0.0.3/go.mod h1:PnQWQ36EkMym5ulAnfCcpgOzbMeyyq90xsCcosTHJ5E=
