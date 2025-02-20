@@ -17,11 +17,11 @@ import (
 
 func TestPython(t *testing.T) {
 	cmd := Python("/tmp")
-	conf, out, err := cmd.Run(chatter.Reply{Text: `-c """
+	conf, out, err := cmd.Run(chatter.Reply{Text: `<codeblock>
 import requests
 response = requests.get('https://example.com/')
 print(response)
-"""
+</codeblock>
 `})
 
 	it.Then(t).Should(

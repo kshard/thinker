@@ -18,8 +18,45 @@ import (
 	"github.com/kshard/thinker/reasoner"
 )
 
-func TestCmdTaskDeduct(t *testing.T) {
-	r := reasoner.NewCmdTask[string]()
+func TestCmdDeduct(t *testing.T) {
+	r := reasoner.NewCmd[string]()
+
+	t.Run("Refine", func(t *testing.T) {
+		phase, prompt, err := r.Deduct(thinker.State[string, thinker.CmdOut]{
+			Feedback:   chatter.Feedback("feedback"),
+			Confidence: 0.1,
+		})
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(phase, thinker.AGENT_REFINE),
+			it.String(prompt.String()).Contain("Refine the previous operation"),
+		)
+	})
+
+	t.Run("Return", func(t *testing.T) {
+		phase, _, err := r.Deduct(thinker.State[string, thinker.CmdOut]{
+			Reply: thinker.CmdOut{Cmd: command.BASH, Output: "Bash Output"},
+		})
+
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(phase, thinker.AGENT_RETURN),
+		)
+	})
+
+	t.Run("Abort", func(t *testing.T) {
+		phase, _, _ := r.Deduct(thinker.State[string, thinker.CmdOut]{})
+
+		it.Then(t).Should(
+			it.Equal(phase, thinker.AGENT_ABORT),
+		)
+	})
+
+}
+
+func TestCmdSeqDeduct(t *testing.T) {
+	r := reasoner.NewCmdSeq[string]()
 
 	t.Run("Refine", func(t *testing.T) {
 		phase, prompt, err := r.Deduct(thinker.State[string, thinker.CmdOut]{

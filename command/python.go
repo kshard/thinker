@@ -11,11 +11,9 @@ package command
 import (
 	"bytes"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
@@ -24,12 +22,14 @@ import (
 // A unique name for bash (the shell)
 const PYTHON = "python"
 
+// (format python code with \\t, \\n)
+
 // Create new bash command, defining the os variant and working dir
 func Python(dir string) thinker.Cmd {
 	return thinker.Cmd{
 		Cmd:    PYTHON,
-		Short:  "Use Python REPL to execute scripts that help you complete your task (format python code with \\t, \\n). Declare dependencies to python modules.",
-		Syntax: `python -c """source code"""`,
+		Short:  "Use python to execute scripts that help you complete your task. Enclose the python code in <codeblock> tags.",
+		Syntax: `python  <codeblock>source code</codeblock>`,
 		Run:    python(dir),
 	}
 }
@@ -37,7 +37,6 @@ func Python(dir string) thinker.Cmd {
 func pySetup(dir string) error {
 	pyenv := filepath.Join(dir, ".venv")
 	if _, err := os.Stat(pyenv); err != nil {
-		slog.Info("Setup python")
 		setup := exec.Command("python3", "-m", "venv", ".venv")
 		setup.Dir = dir
 
@@ -46,7 +45,6 @@ func pySetup(dir string) error {
 			return err
 		}
 
-		slog.Info("Setup pigar")
 		pipreqs := exec.Command(filepath.Join(pyenv, "bin/python"), "-m", "pip", "install", "pigar")
 		pipreqs.Dir = dir
 
@@ -59,16 +57,9 @@ func pySetup(dir string) error {
 	return nil
 }
 
-func pyDeps(dir, scode string) error {
+func pyDeps(dir string) error {
 	pyenv := filepath.Join(dir, ".venv")
-	pysrc := filepath.Join(dir, "main.py")
 
-	slog.Info("Write source code")
-	if err := os.WriteFile(pysrc, []byte(scode), 0666); err != nil {
-		return err
-	}
-
-	slog.Info("Generate deps")
 	deps := exec.Command(filepath.Join(pyenv, "bin/pigar"), "generate", "--question-answer", "yes", "--auto-select")
 	deps.Dir = dir
 
@@ -77,7 +68,6 @@ func pyDeps(dir, scode string) error {
 		return err
 	}
 
-	slog.Info("Install deps")
 	pip := exec.Command(filepath.Join(pyenv, "bin/python"), "-m", "pip", "install", "-r", "requirements.txt")
 	pip.Dir = dir
 
@@ -89,22 +79,43 @@ func pyDeps(dir, scode string) error {
 	return nil
 }
 
+func pyfile(dir, code string) (string, error) {
+	fd, err := os.CreateTemp(dir, "job-*.py")
+	if err != nil {
+		return "", err
+	}
+	defer fd.Close()
+
+	_, err = fd.WriteString(code)
+	if err != nil {
+		return "", err
+	}
+
+	return fd.Name(), nil
+}
+
 func python(dir string) func(chatter.Reply) (float64, thinker.CmdOut, error) {
 	return func(command chatter.Reply) (float64, thinker.CmdOut, error) {
 		if err := pySetup(dir); err != nil {
 			return 0.0, thinker.CmdOut{}, err
 		}
 
-		scode := strings.TrimSpace(command.Text)
-		scode = strings.TrimPrefix(scode, `-c """`)
-		scode = strings.TrimSuffix(scode, `"""`)
+		code, err := CodeBlock(PYTHON, command.Text)
+		if err != nil {
+			return 0.00, thinker.CmdOut{Cmd: PYTHON}, err
+		}
 
-		if err := pyDeps(dir, scode); err != nil {
+		file, err := pyfile(dir, code)
+		if err != nil {
+			return 0.00, thinker.CmdOut{Cmd: PYTHON}, err
+		}
+
+		if err := pyDeps(dir); err != nil {
 			return 0.0, thinker.CmdOut{}, err
 		}
 
 		pyenv := filepath.Join(dir, ".venv")
-		cmd := exec.Command(filepath.Join(pyenv, "bin/python"), "-c", scode)
+		cmd := exec.Command(filepath.Join(pyenv, "bin/python"), file)
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Dir = dir

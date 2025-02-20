@@ -16,13 +16,42 @@ import (
 	"github.com/kshard/thinker/command"
 )
 
-type CmdTask[A any] struct{}
+// The cmd (command) reasoner set the goal for agent to execute a single command.
+// It returns right after the command return results.
+type Cmd[A any] struct{}
 
-func NewCmdTask[A any]() *CmdTask[A] {
-	return &CmdTask[A]{}
+// Creates new command reasoner.
+func NewCmd[A any]() *Cmd[A] {
+	return &Cmd[A]{}
 }
 
-func (task *CmdTask[A]) Deduct(state thinker.State[A, thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
+func (task *Cmd[A]) Deduct(state thinker.State[A, thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
+	if state.Feedback != nil && state.Confidence < 1.0 {
+		var prompt chatter.Prompt
+		prompt.WithTask("Refine the previous operation using the feedback below.")
+		prompt.With(state.Feedback)
+
+		return thinker.AGENT_REFINE, prompt, nil
+	}
+
+	if len(state.Reply.Cmd) != 0 {
+		return thinker.AGENT_RETURN, chatter.Prompt{}, nil
+	}
+
+	return thinker.AGENT_ABORT, chatter.Prompt{}, thinker.ErrUnknown
+}
+
+//------------------------------------------------------------------------------
+
+// The sequence of cmd (commands) reasoner set the goal for agent to execute a sequence of commands.
+// The reason returns only after LLM uses return command.
+type CmdSeq[A any] struct{}
+
+func NewCmdSeq[A any]() *CmdSeq[A] {
+	return &CmdSeq[A]{}
+}
+
+func (task *CmdSeq[A]) Deduct(state thinker.State[A, thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
 		prompt.WithTask("Refine the previous workflow step using the feedback below.")
