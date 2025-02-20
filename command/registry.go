@@ -119,22 +119,6 @@ func (r *Registry) FMap(reply chatter.Reply) (float64, thinker.CmdOut, error) {
 		}
 	}
 
-	// seq := strings.Split(string(reply.Text), "\n")
-	// for _, s := range seq {
-	// 	if strings.HasPrefix(s, "TOOL:") {
-	// 		for name, cmd := range r.registry {
-	// 			if strings.HasPrefix(s[5:], name) {
-	// 				in := chatter.Reply{
-	// 					Text:            s[5+len(name):],
-	// 					UsedInputTokens: reply.UsedInputTokens,
-	// 					UsedReplyTokens: reply.UsedReplyTokens,
-	// 				}
-	// 				return cmd.Run(in)
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	err := thinker.Feedback(
 		`Improve the response based on feedback:`,
 		"The output does not contain valid reference to the tool.",
