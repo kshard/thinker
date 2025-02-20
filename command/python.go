@@ -22,9 +22,7 @@ import (
 // A unique name for bash (the shell)
 const PYTHON = "python"
 
-// (format python code with \\t, \\n)
-
-// Create new bash command, defining the os variant and working dir
+// Create new python command, defining working dir
 func Python(dir string) thinker.Cmd {
 	return thinker.Cmd{
 		Cmd:    PYTHON,
