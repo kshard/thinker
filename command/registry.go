@@ -34,15 +34,6 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Return all registered commands
-func (r *Registry) Commands() []string {
-	seq := make([]string, 0)
-	for cmd := range r.registry {
-		seq = append(seq, cmd)
-	}
-	return seq
-}
-
 // Register new command
 func (r *Registry) Register(cmd thinker.Cmd) error {
 	r.mu.Lock()
