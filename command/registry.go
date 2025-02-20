@@ -60,7 +60,7 @@ func (r *Registry) Harden(prompt *chatter.Prompt) {
 
 			"When you need to execute a command, output a structured command using the syntax defined by the commands registry.",
 			"Implement the sequential workflow, output single command only and wait for result to decide next action.",
-			"Do not assume availability of any command, including python.",
+			"Do not assume availability of any command.",
 			"Do not invent commands that are not explicitly allowed.",
 		),
 	)
@@ -95,18 +95,17 @@ func (r *Registry) Harden(prompt *chatter.Prompt) {
 
 // Transform LLM response into the command invokation, returns the result of command.
 func (r *Registry) FMap(reply chatter.Reply) (float64, thinker.CmdOut, error) {
-	seq := strings.Split(string(reply.Text), "\n")
-	for _, s := range seq {
-		if strings.HasPrefix(s, "TOOL:") {
-			for name, cmd := range r.registry {
-				if strings.HasPrefix(s[5:], name) {
-					in := chatter.Reply{
-						Text:            s[5+len(name):],
-						UsedInputTokens: reply.UsedInputTokens,
-						UsedReplyTokens: reply.UsedReplyTokens,
-					}
-					return cmd.Run(in)
+	s := string(reply.Text)
+	at := strings.Index(s, "TOOL:")
+	if at > -1 {
+		for name, cmd := range r.registry {
+			if strings.HasPrefix(s[at+5:], name) {
+				in := chatter.Reply{
+					Text:            s[5+len(name):],
+					UsedInputTokens: reply.UsedInputTokens,
+					UsedReplyTokens: reply.UsedReplyTokens,
 				}
+				return cmd.Run(in)
 			}
 		}
 	}

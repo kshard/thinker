@@ -11,6 +11,7 @@ package command
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/kshard/chatter"
@@ -24,15 +25,40 @@ const BASH = "bash"
 func Bash(os, dir string) thinker.Cmd {
 	return thinker.Cmd{
 		Cmd:    BASH,
-		Short:  fmt.Sprintf("executes shell command, strictly adhere shell command syntaxt to %s", os),
-		Syntax: "bash <command>",
+		Short:  fmt.Sprintf("executes shell command, strictly adhere shell command syntaxt to %s. Enclose the bash commands in <codeblock> tags.", os),
+		Syntax: "bash <codeblock>source code</codeblock>",
 		Run:    bash(os, dir),
 	}
 }
 
+func shfile(dir, code string) (string, error) {
+	fd, err := os.CreateTemp(dir, "job-*.sh")
+	if err != nil {
+		return "", err
+	}
+	defer fd.Close()
+
+	_, err = fd.WriteString(code)
+	if err != nil {
+		return "", err
+	}
+
+	return fd.Name(), nil
+}
+
 func bash(os string, dir string) func(chatter.Reply) (float64, thinker.CmdOut, error) {
 	return func(command chatter.Reply) (float64, thinker.CmdOut, error) {
-		cmd := exec.Command("bash", "-c", command.Text)
+		code, err := CodeBlock(BASH, command.Text)
+		if err != nil {
+			return 0.00, thinker.CmdOut{Cmd: BASH}, err
+		}
+
+		file, err := shfile(dir, code)
+		if err != nil {
+			return 0.00, thinker.CmdOut{Cmd: BASH}, err
+		}
+
+		cmd := exec.Command("bash", file)
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Dir = dir

@@ -49,6 +49,7 @@ In this library, an agent is defined as a side-effect function `ƒ: A ⟼ B`, wh
 - [Quick example](#quick-example)
 - [Agent Architecture](#agent-architecture)
   - [Commands \& Tools](#commands--tools)
+    - [Supported commands](#supported-commands)
   - [Chaining agents](#chaining-agents)
 - [How To Contribute](#how-to-contribute)
   - [commit message](#commit-message)
@@ -192,6 +193,10 @@ When constructing a prompt, it is essential to include a section that "advertise
 
 The [script example](./examples/script/script.go) demonstrates a simple agent that utilizes `bash` to generate and modify files on the local filesystem.
 
+#### Supported commands
+* `bash` execute bash script or single command
+* `golang` execute golang code block
+* `python` execute python code block
 
 ### Chaining agents
 

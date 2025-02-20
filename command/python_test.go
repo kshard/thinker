@@ -15,14 +15,19 @@ import (
 	"github.com/kshard/chatter"
 )
 
-func TestBash(t *testing.T) {
-	cmd := Bash("", "/tmp")
-	conf, out, err := cmd.Run(chatter.Reply{Text: "<codeblock>ls</codeblock>"})
+func TestPython(t *testing.T) {
+	cmd := Python("/tmp")
+	conf, out, err := cmd.Run(chatter.Reply{Text: `<codeblock>
+import requests
+response = requests.get('https://example.com/')
+print(response)
+</codeblock>
+`})
 
 	it.Then(t).Should(
 		it.Nil(err),
 		it.Equal(conf, 1.0),
 		it.Equal(out.Cmd, cmd.Cmd),
-		it.Greater(len(out.Output), 0),
+		it.String(out.Output).Contain("Response [200]"),
 	)
 }
