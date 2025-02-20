@@ -29,7 +29,7 @@ func Python(dir string) thinker.Cmd {
 	return thinker.Cmd{
 		Cmd:    PYTHON,
 		Short:  "Use Python REPL to execute scripts that help you complete your task (format python code with \\t, \\n). Declare dependencies to python modules.",
-		Syntax: `python -c """<source code>"""`,
+		Syntax: `python -c """source code"""`,
 		Run:    python(dir),
 	}
 }
