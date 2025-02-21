@@ -20,7 +20,7 @@ func FromEncoder[A any](f func(A) (chatter.Prompt, error)) thinker.Encoder[A] {
 
 type fEncoder[T any] func(T) (chatter.Prompt, error)
 
-func (f fEncoder[T]) FMap(t T) (chatter.Prompt, error) { return f(t) }
+func (f fEncoder[T]) Encode(t T) (chatter.Prompt, error) { return f(t) }
 
 // From is helper to build Decoder[B] interface from pure function.
 func FromDecoder[B any](f func(chatter.Reply) (float64, B, error)) thinker.Decoder[B] {
@@ -29,4 +29,4 @@ func FromDecoder[B any](f func(chatter.Reply) (float64, B, error)) thinker.Decod
 
 type fDecoder[T any] func(chatter.Reply) (float64, T, error)
 
-func (f fDecoder[T]) FMap(t chatter.Reply) (float64, T, error) { return f(t) }
+func (f fDecoder[T]) Decode(t chatter.Reply) (float64, T, error) { return f(t) }
