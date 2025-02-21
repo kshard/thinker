@@ -17,20 +17,24 @@ import (
 	"github.com/kshard/thinker"
 )
 
+const INFINITE = -1
+
 // The stream memory retains all of the agent's observations in the time ordered sequence.
 type Stream struct {
 	mu      sync.Mutex
 	heap    map[guid.K]*thinker.Observation
 	commits []guid.K
 	stratum chatter.Stratum
+	cap     int
 }
 
 // Creates new stream memory that retains all of the agent's observations.
-func NewStream(stratum chatter.Stratum) *Stream {
+func NewStream(cap int, stratum chatter.Stratum) *Stream {
 	return &Stream{
 		heap:    make(map[guid.K]*thinker.Observation),
 		commits: make([]guid.K, 0),
 		stratum: stratum,
+		cap:     cap,
 	}
 }
 
@@ -41,6 +45,12 @@ func (s *Stream) Commit(e *thinker.Observation) {
 
 	s.heap[e.Created] = e
 	s.commits = append(s.commits, e.Created)
+
+	if s.cap > 0 && len(s.commits) > s.cap {
+		head := s.commits[0]
+		s.commits = s.commits[1:]
+		delete(s.heap, head)
+	}
 }
 
 // Builds the context window for LLM using incoming prompt.

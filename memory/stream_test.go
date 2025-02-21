@@ -17,7 +17,7 @@ import (
 )
 
 func TestStream(t *testing.T) {
-	s := NewStream("role.")
+	s := NewStream(2, "role.")
 
 	t.Run("Commit", func(t *testing.T) {
 		var prompt chatter.Prompt
@@ -45,4 +45,25 @@ func TestStream(t *testing.T) {
 			it.Seq(seq).Equal("role.", "prompt.", "reply.", "ask."),
 		)
 	})
+
+	t.Run("Evict", func(t *testing.T) {
+		a := thinker.NewObservation(chatter.Prompt{Task: "0."}, chatter.Reply{Text: "0."})
+		s.Commit(a)
+
+		b := thinker.NewObservation(chatter.Prompt{Task: "a."}, chatter.Reply{Text: "a."})
+		s.Commit(b)
+
+		c := thinker.NewObservation(chatter.Prompt{Task: "b."}, chatter.Reply{Text: "b."})
+		s.Commit(c)
+
+		seq := make([]string, 0)
+		for _, x := range s.Context(chatter.Prompt{Task: "c."}) {
+			seq = append(seq, x.String())
+		}
+
+		it.Then(t).Should(
+			it.Seq(seq).Equal("role.", "a.", "a.", "b.", "b.", "c."),
+		)
+	})
+
 }

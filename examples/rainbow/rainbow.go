@@ -97,7 +97,7 @@ func main() {
 
 		// Configures memory for the agent. Typically, memory retains all of
 		// the agent's observations. Here, we use a stream memory that holds all observations.
-		memory.NewStream("You are agent who remembers and uses earlier chat history."),
+		memory.NewStream(memory.INFINITE, "You are agent who remembers and uses earlier chat history."),
 
 		// Configures the reasoner, which determines the agent's next actions and prompts.
 		// Here, we use custom (app specific) reasoner. The agent is restricted to execute
