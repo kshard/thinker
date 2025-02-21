@@ -94,7 +94,7 @@ func (r *Registry) Harden(prompt *chatter.Prompt) {
 }
 
 // Transform LLM response into the command invokation, returns the result of command.
-func (r *Registry) FMap(reply chatter.Reply) (float64, thinker.CmdOut, error) {
+func (r *Registry) Decode(reply chatter.Reply) (float64, thinker.CmdOut, error) {
 	s := string(reply.Text)
 	at := strings.Index(s, "TOOL:")
 	if at > -1 {

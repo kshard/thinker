@@ -18,7 +18,7 @@ import (
 
 func TestEncoderID(t *testing.T) {
 	input := "prompt."
-	prompt, err := codec.EncoderID.FMap(input)
+	prompt, err := codec.EncoderID.Encode(input)
 
 	it.Then(t).Should(
 		it.Nil(err),
@@ -28,7 +28,7 @@ func TestEncoderID(t *testing.T) {
 
 func TestDecoderID(t *testing.T) {
 	input := "prompt"
-	conf, text, err := codec.DecoderID.FMap(chatter.Reply{Text: input})
+	conf, text, err := codec.DecoderID.Decode(chatter.Reply{Text: input})
 
 	it.Then(t).Should(
 		it.Nil(err),

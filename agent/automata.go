@@ -44,7 +44,7 @@ func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 	var nul B
 	state := thinker.State[A, B]{Phase: thinker.AGENT_ASK, Epoch: 0, Input: input}
 
-	prompt, err := automata.encoder.FMap(input)
+	prompt, err := automata.encoder.Encode(input)
 	if err != nil {
 		return nul, err
 	}
@@ -56,7 +56,7 @@ func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 			return nul, err
 		}
 
-		state.Confidence, state.Reply, err = automata.decoder.FMap(reply)
+		state.Confidence, state.Reply, err = automata.decoder.Decode(reply)
 		if err != nil {
 			if ok := errors.As(err, &state.Feedback); !ok {
 				return nul, err
