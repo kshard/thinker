@@ -65,7 +65,7 @@ func NewAgentB(llm chatter.Chatter) *AgentB {
 	agt.registry.Register(command.Return())
 
 	agt.Automata = agent.NewAutomata(llm,
-		memory.NewStream(`
+		memory.NewStream(memory.INFINITE, `
 			You are automomous agent who uses tools to perform required tasks.
 			You are using and remember context from earlier chat history to execute the task.
 		`),

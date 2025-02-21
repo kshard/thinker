@@ -95,7 +95,7 @@ func main() {
 
 		// Configures memory for the agent. Typically, memory retains all of
 		// the agent's observations. Here, we use a stream memory that holds all observations.
-		memory.NewStream(`
+		memory.NewStream(memory.INFINITE, `
 			You are automomous agent who uses tools to perform required tasks.
 			You are using and remember context from earlier chat history to execute the task.
 		`),
