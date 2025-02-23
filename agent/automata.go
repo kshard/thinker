@@ -19,7 +19,7 @@ import (
 type Automata[A, B any] struct {
 	llm      chatter.Chatter
 	memory   thinker.Memory
-	reasoner thinker.Reasoner[A, B]
+	reasoner thinker.Reasoner[B]
 	encoder  thinker.Encoder[A]
 	decoder  thinker.Decoder[B]
 }
@@ -27,7 +27,7 @@ type Automata[A, B any] struct {
 func NewAutomata[A, B any](
 	llm chatter.Chatter,
 	memory thinker.Memory,
-	reasoner thinker.Reasoner[A, B],
+	reasoner thinker.Reasoner[B],
 	encoder thinker.Encoder[A],
 	decoder thinker.Decoder[B],
 ) *Automata[A, B] {
@@ -42,7 +42,7 @@ func NewAutomata[A, B any](
 
 func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
 	var nul B
-	state := thinker.State[A, B]{Phase: thinker.AGENT_ASK, Epoch: 0, Input: input}
+	state := thinker.State[B]{Phase: thinker.AGENT_ASK, Epoch: 0}
 
 	prompt, err := automata.encoder.Encode(input)
 	if err != nil {
@@ -75,7 +75,7 @@ func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 
 		switch phase {
 		case thinker.AGENT_ASK:
-			state = thinker.State[A, B]{Phase: thinker.AGENT_ASK, Epoch: 0}
+			state = thinker.State[B]{Phase: thinker.AGENT_ASK, Epoch: 0}
 			prompt = request
 			shortMemory = automata.memory.Context(prompt)
 			continue

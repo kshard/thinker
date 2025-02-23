@@ -17,7 +17,7 @@ import (
 // or non-deterministic analysis of immediate results and past experiences.
 // Based on this assessment, it determines whether the goal has been achieved
 // and, if not, suggests the best new goal for the agent to pursue.
-type Reasoner[A, B any] interface {
+type Reasoner[B any] interface {
 	// Deduct new goal for the agent to pursue.
-	Deduct(State[A, B]) (Phase, chatter.Prompt, error)
+	Deduct(State[B]) (Phase, chatter.Prompt, error)
 }

@@ -36,7 +36,7 @@ func NewAgentA(llm chatter.Chatter) *AgentA {
 	agt := &AgentA{}
 	agt.Automata = agent.NewAutomata(llm,
 		memory.NewVoid(),
-		reasoner.NewVoid[string, string](),
+		reasoner.NewVoid[string](),
 		codec.FromEncoder(agt.story),
 		codec.DecoderID,
 	)
@@ -69,15 +69,15 @@ func NewAgentB(llm chatter.Chatter) *AgentB {
 			You are automomous agent who uses tools to perform required tasks.
 			You are using and remember context from earlier chat history to execute the task.
 		`),
-		reasoner.NewEpoch(4, reasoner.From(agt.deduct)),
-		codec.FromEncoder(agt.encode),
+		reasoner.NewEpoch(4, agt),
+		agt,
 		agt.registry,
 	)
 
 	return agt
 }
 
-func (agt AgentB) encode(string) (prompt chatter.Prompt, err error) {
+func (agt AgentB) Encode(string) (prompt chatter.Prompt, err error) {
 	prompt.WithTask(`
 		Use available tools to complete the workflow:
 		(1) Use available tools to read files one by one.
@@ -89,7 +89,7 @@ func (agt AgentB) encode(string) (prompt chatter.Prompt, err error) {
 	return
 }
 
-func (AgentB) deduct(state thinker.State[string, thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
+func (AgentB) Deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
 	// the registry has failed to execute command, we have to supply the feedback to LLM
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt

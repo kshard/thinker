@@ -67,7 +67,7 @@ func validate(seq []string) error {
 }
 
 // deduct new goal for the agent to pursue.
-func deduct(state thinker.State[any, []string]) (thinker.Phase, chatter.Prompt, error) {
+func deduct(state thinker.State[[]string]) (thinker.Phase, chatter.Prompt, error) {
 	// Provide feedback to LLM if there are no confidence about the results
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt

@@ -42,7 +42,7 @@ func encode(q string) (prompt chatter.Prompt, err error) {
 
 // deduct new goal for the agent to pursue.
 // Note, the agent uses registry as decoder therefore agent  is string -> thinker.CmdOut
-func deduct(state thinker.State[string, thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
+func deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
 	// the registry has failed to execute command, we have to supply the feedback to LLM
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
