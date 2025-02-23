@@ -15,18 +15,18 @@ import (
 
 // The epoch reasoner limits the number of agent iterations per step.
 // It aborts execution if the maximum limit is reached.
-type Epoch[A, B any] struct {
-	thinker.Reasoner[A, B]
+type Epoch[B any] struct {
+	thinker.Reasoner[B]
 	max int
 }
 
 // Creates new epoch reasoner that limits the number of agent iterations per step.
-func NewEpoch[A, B any](max int, reasoner thinker.Reasoner[A, B]) Epoch[A, B] {
-	return Epoch[A, B]{Reasoner: reasoner, max: max}
+func NewEpoch[B any](max int, reasoner thinker.Reasoner[B]) Epoch[B] {
+	return Epoch[B]{Reasoner: reasoner, max: max}
 }
 
 // Deduct new goal for the agent to pursue.
-func (epoch Epoch[A, B]) Deduct(state thinker.State[A, B]) (thinker.Phase, chatter.Prompt, error) {
+func (epoch Epoch[B]) Deduct(state thinker.State[B]) (thinker.Phase, chatter.Prompt, error) {
 	if state.Epoch >= epoch.max {
 		return thinker.AGENT_ABORT, chatter.Prompt{}, thinker.ErrMaxEpoch.With(thinker.ErrAbout, state.Epoch)
 	}

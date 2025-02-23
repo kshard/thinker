@@ -19,10 +19,10 @@ import (
 )
 
 func TestCmdDeduct(t *testing.T) {
-	r := reasoner.NewCmd[string]()
+	r := reasoner.NewCmd()
 
 	t.Run("Refine", func(t *testing.T) {
-		phase, prompt, err := r.Deduct(thinker.State[string, thinker.CmdOut]{
+		phase, prompt, err := r.Deduct(reasoner.StateCmd{
 			Feedback:   chatter.Feedback("feedback"),
 			Confidence: 0.1,
 		})
@@ -35,7 +35,7 @@ func TestCmdDeduct(t *testing.T) {
 	})
 
 	t.Run("Return", func(t *testing.T) {
-		phase, _, err := r.Deduct(thinker.State[string, thinker.CmdOut]{
+		phase, _, err := r.Deduct(reasoner.StateCmd{
 			Reply: thinker.CmdOut{Cmd: command.BASH, Output: "Bash Output"},
 		})
 
@@ -46,7 +46,7 @@ func TestCmdDeduct(t *testing.T) {
 	})
 
 	t.Run("Abort", func(t *testing.T) {
-		phase, _, _ := r.Deduct(thinker.State[string, thinker.CmdOut]{})
+		phase, _, _ := r.Deduct(reasoner.StateCmd{})
 
 		it.Then(t).Should(
 			it.Equal(phase, thinker.AGENT_ABORT),
@@ -56,10 +56,10 @@ func TestCmdDeduct(t *testing.T) {
 }
 
 func TestCmdSeqDeduct(t *testing.T) {
-	r := reasoner.NewCmdSeq[string]()
+	r := reasoner.NewCmdSeq()
 
 	t.Run("Refine", func(t *testing.T) {
-		phase, prompt, err := r.Deduct(thinker.State[string, thinker.CmdOut]{
+		phase, prompt, err := r.Deduct(reasoner.StateCmd{
 			Feedback:   chatter.Feedback("feedback"),
 			Confidence: 0.1,
 		})
@@ -72,7 +72,7 @@ func TestCmdSeqDeduct(t *testing.T) {
 	})
 
 	t.Run("Return", func(t *testing.T) {
-		phase, _, err := r.Deduct(thinker.State[string, thinker.CmdOut]{
+		phase, _, err := r.Deduct(reasoner.StateCmd{
 			Reply: thinker.CmdOut{Cmd: command.RETURN},
 		})
 
@@ -83,7 +83,7 @@ func TestCmdSeqDeduct(t *testing.T) {
 	})
 
 	t.Run("Continue", func(t *testing.T) {
-		phase, prompt, err := r.Deduct(thinker.State[string, thinker.CmdOut]{
+		phase, prompt, err := r.Deduct(reasoner.StateCmd{
 			Reply: thinker.CmdOut{Cmd: command.BASH, Output: "Bash Output"},
 		})
 
@@ -96,11 +96,10 @@ func TestCmdSeqDeduct(t *testing.T) {
 	})
 
 	t.Run("Abort", func(t *testing.T) {
-		phase, _, _ := r.Deduct(thinker.State[string, thinker.CmdOut]{})
+		phase, _, _ := r.Deduct(reasoner.StateCmd{})
 
 		it.Then(t).Should(
 			it.Equal(phase, thinker.AGENT_ABORT),
 		)
 	})
-
 }

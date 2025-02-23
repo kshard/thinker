@@ -29,15 +29,12 @@ const (
 )
 
 // State of the agent, maintained by the agent and used by Reasoner.
-type State[A, B any] struct {
+type State[B any] struct {
 	// Execution phase of the agent
 	Phase Phase
 
 	// Current epoch of execution phase
 	Epoch int
-
-	// Input to LLM
-	Input A
 
 	// Reply from LLM
 	Reply B

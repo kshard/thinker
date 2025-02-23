@@ -17,10 +17,10 @@ import (
 )
 
 func TestEpoch(t *testing.T) {
-	r := reasoner.NewEpoch(5, reasoner.NewVoid[string, string]())
+	r := reasoner.NewEpoch(5, reasoner.NewVoid[string]())
 
 	t.Run("Pass", func(t *testing.T) {
-		s := thinker.State[string, string]{Epoch: 0}
+		s := thinker.State[string]{Epoch: 0}
 		_, _, err := r.Deduct(s)
 
 		it.Then(t).Should(
@@ -29,7 +29,7 @@ func TestEpoch(t *testing.T) {
 	})
 
 	t.Run("Fail", func(t *testing.T) {
-		s := thinker.State[string, string]{Epoch: 5}
+		s := thinker.State[string]{Epoch: 5}
 		_, _, err := r.Deduct(s)
 
 		it.Then(t).Should(

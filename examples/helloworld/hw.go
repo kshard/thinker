@@ -63,7 +63,7 @@ func main() {
 		// Configures the reasoner, which determines the agent's next actions and prompts.
 		// Here, we use a void reasoner, meaning no reasoning is performed—the agent
 		// simply returns the result.
-		reasoner.NewVoid[string, string](),
+		reasoner.NewVoid[string](),
 
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, we use an encoder that converts string expressions into prompt.

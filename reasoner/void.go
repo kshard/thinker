@@ -14,12 +14,12 @@ import (
 )
 
 // The void reasoner always sets a new goal to return results.
-type Void[A, B any] struct{}
+type Void[B any] struct{}
 
 // Creates new void reasoner that always sets a new goal to return results.
-func NewVoid[A, B any]() *Void[A, B] { return &Void[A, B]{} }
+func NewVoid[B any]() *Void[B] { return &Void[B]{} }
 
 // Deduct new goal for the agent to pursue.
-func (Void[A, B]) Deduct(thinker.State[A, B]) (thinker.Phase, chatter.Prompt, error) {
+func (Void[B]) Deduct(thinker.State[B]) (thinker.Phase, chatter.Prompt, error) {
 	return thinker.AGENT_RETURN, chatter.Prompt{}, nil
 }

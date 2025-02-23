@@ -14,13 +14,13 @@ import (
 )
 
 // From is helper to build Reasoner[A, B any] interface from pure function.
-func From[A, B any](f func(thinker.State[A, B]) (thinker.Phase, chatter.Prompt, error)) thinker.Reasoner[A, B] {
-	return fromReasoner[A, B](f)
+func From[B any](f func(thinker.State[B]) (thinker.Phase, chatter.Prompt, error)) thinker.Reasoner[B] {
+	return fromReasoner[B](f)
 }
 
-type fromReasoner[A, B any] func(thinker.State[A, B]) (thinker.Phase, chatter.Prompt, error)
+type fromReasoner[B any] func(thinker.State[B]) (thinker.Phase, chatter.Prompt, error)
 
 // Deduct new goal for the agent to pursue.
-func (f fromReasoner[A, B]) Deduct(s thinker.State[A, B]) (thinker.Phase, chatter.Prompt, error) {
+func (f fromReasoner[B]) Deduct(s thinker.State[B]) (thinker.Phase, chatter.Prompt, error) {
 	return f(s)
 }

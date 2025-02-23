@@ -51,6 +51,7 @@ In this library, an agent is defined as a side-effect function `ƒ: A ⟼ B`, wh
   - [Commands \& Tools](#commands--tools)
     - [Supported commands](#supported-commands)
   - [Chaining agents](#chaining-agents)
+- [FAQ](#faq)
 - [How To Contribute](#how-to-contribute)
   - [commit message](#commit-message)
   - [bugs](#bugs)
@@ -203,6 +204,40 @@ The [script example](./examples/script/script.go) demonstrates a simple agent th
 The `thinker` library does not provide built-in mechanisms for chaining agents. Instead, it encourages the use of standard Go techniques either pure functional chaining or chaining of go routines (e.g. [golem/pipe](https://github.com/fogfish/golem)). 
 
 The [chain example](./examples/chain/chain.go) demostrates off-the-shelf techniques for agents chaining.
+
+
+## FAQ
+
+<details>
+<summary>Do agents support concurrent execution?</summary>
+
+This design does not support concurency on the purpose - the pure actor architecture is used. The agent follows a sequential decision-making loop:
+* Inner for {} loop causes each step depends on the previous result to maintain conversational causal effect
+* While memory is thread-safe and sharable among agents in the pipeline. It is not design to support multiple isolated session.
+* LLM calls are synchronous.
+
+To enable concurrency, the application have to implement worker pools.
+</details>
+
+
+<details>
+<summary>How can an agent maintain a global state accessible to the encoder, decoder, and reasoner?</summary>
+
+Use a struct with receiver methods to encapsulate state and provide direct access to the encoder, decoder, and reasoner. This keeps state management simple and idiomatic in Go.
+
+```go
+type Agent struct{
+  // declare global state
+}
+
+func (*Agent) Encode(string) (prompt chatter.Prompt, err error) { /* ... */ }
+
+func (*Agent) Decode(chatter.Reply) (float64, string, error) { /* ... */ }
+
+func (*Agent) Deduct(thinker.State[string]) (thinker.Phase, chatter.Prompt, error) { /* ... */ }
+```
+</details>
+
 
 
 ## How To Contribute
