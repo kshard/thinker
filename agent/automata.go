@@ -53,7 +53,7 @@ func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 	for {
 		reply, err := automata.llm.Prompt(ctx, shortMemory)
 		if err != nil {
-			return nul, err
+			return nul, thinker.ErrLLM.With(err)
 		}
 
 		state.Confidence, state.Reply, err = automata.decoder.Decode(reply)
@@ -89,9 +89,9 @@ func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 			prompt = request
 			shortMemory = automata.memory.Context(prompt)
 		case thinker.AGENT_ABORT:
-			return nul, err
+			return nul, thinker.ErrAborted.With(err)
 		default:
-			return nul, thinker.ErrAbout
+			return nul, thinker.ErrAborted
 		}
 	}
 }

@@ -12,9 +12,10 @@ import "github.com/fogfish/faults"
 
 // Common agents errors
 const (
-	ErrUnknown     = faults.Type("unkown state")
-	ErrAbout       = faults.Type("execution aborted")
+	ErrLLM         = faults.Type("LLM I/O has failed")
+	ErrUnknown     = faults.Type("unkown agent statet")
+	ErrAborted     = faults.Type("execution aborted")
 	ErrMaxEpoch    = faults.Safe1[int]("max epoch %d is reached")
 	ErrCmdConflict = faults.Type("command already exists")
-	ErrCmdInvalid  = faults.Type("invalid command specification, missing requored attributes")
+	ErrCmdInvalid  = faults.Type("invalid command specification, missing required attributes")
 )
