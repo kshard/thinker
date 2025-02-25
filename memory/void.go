@@ -16,13 +16,23 @@ import (
 )
 
 // The void memory does not retain any observations.
-type Void struct{}
+type Void struct {
+	stratum chatter.Stratum
+}
 
 // Create the void memory that does not retain any observations.
-func NewVoid() *Void { return &Void{} }
+func NewVoid(stratum chatter.Stratum) *Void {
+	return &Void{stratum: stratum}
+}
 
 // Commit new observation into memory.
 func (s *Void) Commit(e *thinker.Observation) {}
 
 // Builds the context window for LLM using incoming prompt.
-func (s *Void) Context(prompt chatter.Prompt) []fmt.Stringer { return prompt.ToSeq() }
+func (s *Void) Context(prompt chatter.Prompt) []fmt.Stringer {
+	if len(s.stratum) == 0 {
+		return prompt.ToSeq()
+	}
+
+	return []fmt.Stringer{s.stratum, prompt}
+}
