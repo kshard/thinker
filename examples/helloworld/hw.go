@@ -58,7 +58,7 @@ func main() {
 		// Configures memory for the agent. Typically, memory retains all of
 		// the agent's observations. Here, we use a void memory, meaning no
 		// observations are retained.
-		memory.NewVoid(),
+		memory.NewVoid(""),
 
 		// Configures the reasoner, which determines the agent's next actions and prompts.
 		// Here, we use a void reasoner, meaning no reasoning is performed—the agent

@@ -50,8 +50,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
 github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/6HfU=
-github.com/fogfish/faults v0.3.0 h1:5hXImdtvLpeO/Or8+wCZvxgR70ZsZgsm078cg9GV8N0=
-github.com/fogfish/faults v0.3.0/go.mod h1:y8zvZN2pQUe9vDS7rzz0mAnbdfYMorPOeqxpy83YOCk=
+github.com/fogfish/faults v0.3.2 h1:kQai2/VyXJxfd6SD/jYLHiqu0qDl/KXT48q1ppLMAnY=
+github.com/fogfish/faults v0.3.2/go.mod h1:y8zvZN2pQUe9vDS7rzz0mAnbdfYMorPOeqxpy83YOCk=
 github.com/fogfish/golem/hseq v1.3.0 h1:WIJViOF7vsPHvqVLzFrIz4QrBI4EPTC34esrQnjqUvk=
 github.com/fogfish/golem/hseq v1.3.0/go.mod h1:17XORt8nNKl6KOhF43MHSmjK8NksbkBsohAoJGiinUs=
 github.com/fogfish/golem/optics v0.14.0 h1:8XFZ6rlr6GlwDPB/jUtEcPbFngbpY9DfArDXcFN2mts=

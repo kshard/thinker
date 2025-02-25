@@ -35,7 +35,7 @@ type AgentA struct {
 func NewAgentA(llm chatter.Chatter) *AgentA {
 	agt := &AgentA{}
 	agt.Automata = agent.NewAutomata(llm,
-		memory.NewVoid(),
+		memory.NewVoid(""),
 		reasoner.NewVoid[string](),
 		codec.FromEncoder(agt.story),
 		codec.DecoderID,

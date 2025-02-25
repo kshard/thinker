@@ -37,7 +37,7 @@ require (
 	github.com/cdklabs/awscdk-asset-node-proxy-agent-go/nodeproxyagentv6/v2 v2.1.0 // indirect
 	github.com/cdklabs/cloud-assembly-schema-go/awscdkcloudassemblyschema/v39 v39.2.4 // indirect
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/fogfish/faults v0.3.0 // indirect
+	github.com/fogfish/faults v0.3.2 // indirect
 	github.com/fogfish/golem/hseq v1.3.0 // indirect
 	github.com/fogfish/golem/optics v0.14.0 // indirect
 	github.com/fogfish/guid/v2 v2.1.0 // indirect
