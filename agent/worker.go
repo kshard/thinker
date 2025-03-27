@@ -13,6 +13,7 @@ import (
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
+	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
 	"github.com/kshard/thinker/memory"
 	"github.com/kshard/thinker/reasoner"
@@ -21,6 +22,8 @@ import (
 // The agent tailored for executing prompt driven workflow.
 type Worker[A any] struct {
 	*Automata[A, thinker.CmdOut]
+	encoder  thinker.Encoder[A]
+	registry *command.Registry
 }
 
 func NewWorker[A any](
@@ -30,7 +33,7 @@ func NewWorker[A any](
 ) *Worker[A] {
 	registry.Register(command.Return())
 
-	w := &Worker[A]{}
+	w := &Worker[A]{encoder: encoder, registry: registry}
 	w.Automata = NewAutomata(
 		llm,
 		memory.NewStream(memory.INFINITE, `
@@ -38,11 +41,20 @@ func NewWorker[A any](
 			You are using and remember context from earlier chat history to execute the task.
 		`),
 		reasoner.NewEpoch(4, reasoner.From(w.deduct)),
-		encoder,
+		codec.FromEncoder(w.encode),
 		registry,
 	)
 
 	return w
+}
+
+func (w *Worker[A]) encode(in A) (prompt chatter.Prompt, err error) {
+	prompt, err = w.encoder.Encode(in)
+	if err == nil {
+		w.registry.Harden(&prompt)
+	}
+
+	return
 }
 
 func (w *Worker[A]) deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
