@@ -11,7 +11,6 @@ package command
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 
 	"github.com/kshard/chatter"
@@ -31,21 +30,6 @@ func Bash(os, dir string) thinker.Cmd {
 	}
 }
 
-func shfile(dir, code string) (string, error) {
-	fd, err := os.CreateTemp(dir, "job-*.sh")
-	if err != nil {
-		return "", err
-	}
-	defer fd.Close()
-
-	_, err = fd.WriteString(code)
-	if err != nil {
-		return "", err
-	}
-
-	return fd.Name(), nil
-}
-
 func bash(os string, dir string) func(chatter.Reply) (float64, thinker.CmdOut, error) {
 	return func(command chatter.Reply) (float64, thinker.CmdOut, error) {
 		code, err := CodeBlock(BASH, command.Text)
@@ -53,12 +37,7 @@ func bash(os string, dir string) func(chatter.Reply) (float64, thinker.CmdOut, e
 			return 0.00, thinker.CmdOut{Cmd: BASH}, err
 		}
 
-		file, err := shfile(dir, code)
-		if err != nil {
-			return 0.00, thinker.CmdOut{Cmd: BASH}, err
-		}
-
-		cmd := exec.Command("bash", file)
+		cmd := exec.Command("bash", "-c", code)
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Dir = dir

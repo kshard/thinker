@@ -16,6 +16,7 @@ import (
 	"github.com/kshard/thinker"
 )
 
+// Generic agent automata
 type Automata[A, B any] struct {
 	llm      chatter.Chatter
 	memory   thinker.Memory
