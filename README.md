@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./doc/thinker-3.svg" height="220" />
+  <img src="./doc/thinker-4.svg" height="220" />
   <h3 align="center">thinker</h3>
   <p align="center"><strong>LLM generative agents for Golang</strong></p>
 
