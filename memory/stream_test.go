@@ -66,4 +66,31 @@ func TestStream(t *testing.T) {
 		)
 	})
 
+	t.Run("Purge", func(t *testing.T) {
+		a := thinker.NewObservation(chatter.Prompt{Task: "a."}, chatter.Reply{Text: "a."})
+		s.Commit(a)
+
+		b := thinker.NewObservation(chatter.Prompt{Task: "b."}, chatter.Reply{Text: "b."})
+		s.Commit(b)
+
+		seq := make([]string, 0)
+		for _, x := range s.Context(chatter.Prompt{Task: "c."}) {
+			seq = append(seq, x.String())
+		}
+
+		it.Then(t).Should(
+			it.Seq(seq).Equal("role.", "a.", "a.", "b.", "b.", "c."),
+		)
+
+		s.Purge()
+
+		seq = make([]string, 0)
+		for _, x := range s.Context(chatter.Prompt{Task: "c."}) {
+			seq = append(seq, x.String())
+		}
+		it.Then(t).Should(
+			it.Seq(seq).Equal("role.", "c."),
+		)
+	})
+
 }
