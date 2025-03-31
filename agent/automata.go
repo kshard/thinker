@@ -41,6 +41,26 @@ func NewAutomata[A, B any](
 	}
 }
 
+// Prompting agent to perform a work and forgeting the state.
+// The operation is composable using Go-channels
+func (automata *Automata[A, B]) Echo(in A) (B, error) {
+	automata.Purge()
+	return automata.Prompt(context.Background(), in)
+}
+
+// Prompting agent to perform a work and prerve the state.
+// The operation is composable using Go-channels
+func (automata *Automata[A, B]) Seek(in A) (B, error) {
+	return automata.Prompt(context.Background(), in)
+}
+
+// Purge automata's memory
+func (automata *Automata[A, B]) Purge() {
+	automata.reasoner.Purge()
+	automata.memory.Purge()
+}
+
+// Prompt agent
 func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
 	var nul B
 	state := thinker.State[B]{Phase: thinker.AGENT_ASK, Epoch: 0}

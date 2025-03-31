@@ -28,6 +28,8 @@ func NewCmd() *Cmd {
 	return &Cmd{}
 }
 
+func (task *Cmd) Purge() {}
+
 func (task *Cmd) Deduct(state StateCmd) (thinker.Phase, chatter.Prompt, error) {
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
@@ -53,6 +55,8 @@ type CmdSeq struct{}
 func NewCmdSeq() *CmdSeq {
 	return &CmdSeq{}
 }
+
+func (task *CmdSeq) Purge() {}
 
 func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, chatter.Prompt, error) {
 	if state.Feedback != nil && state.Confidence < 1.0 {

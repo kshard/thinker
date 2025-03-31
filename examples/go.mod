@@ -7,8 +7,8 @@ replace github.com/kshard/thinker => ../
 require (
 	github.com/fogfish/golem/pipe v1.2.0
 	github.com/fogfish/golem/pure v0.10.1
-	github.com/kshard/chatter v0.4.1
-	github.com/kshard/chatter/bedrock v0.2.0
+	github.com/kshard/chatter v0.5.1
+	github.com/kshard/chatter/llm/bedrock v0.3.1
 	github.com/kshard/thinker v0.0.0-00010101000000-000000000000
 )
 
@@ -50,5 +50,6 @@ require (
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
 )

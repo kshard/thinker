@@ -19,6 +19,8 @@ type Void[B any] struct{}
 // Creates new void reasoner that always sets a new goal to return results.
 func NewVoid[B any]() *Void[B] { return &Void[B]{} }
 
+func (Void[B]) Purge() {}
+
 // Deduct new goal for the agent to pursue.
 func (Void[B]) Deduct(thinker.State[B]) (thinker.Phase, chatter.Prompt, error) {
 	return thinker.AGENT_RETURN, chatter.Prompt{}, nil

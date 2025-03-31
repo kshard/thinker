@@ -38,6 +38,14 @@ func NewStream(cap int, stratum chatter.Stratum) *Stream {
 	}
 }
 
+func (s *Stream) Purge() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.heap = make(map[guid.K]*thinker.Observation)
+	s.commits = make([]guid.K, 0)
+}
+
 // Commit new observation into memory.
 func (s *Stream) Commit(e *thinker.Observation) {
 	s.mu.Lock()
