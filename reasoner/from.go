@@ -20,6 +20,8 @@ func From[B any](f func(thinker.State[B]) (thinker.Phase, chatter.Prompt, error)
 
 type fromReasoner[B any] func(thinker.State[B]) (thinker.Phase, chatter.Prompt, error)
 
+func (f fromReasoner[B]) Purge() {}
+
 // Deduct new goal for the agent to pursue.
 func (f fromReasoner[B]) Deduct(s thinker.State[B]) (thinker.Phase, chatter.Prompt, error) {
 	return f(s)

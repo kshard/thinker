@@ -18,6 +18,9 @@ import (
 // Based on this assessment, it determines whether the goal has been achieved
 // and, if not, suggests the best new goal for the agent to pursue.
 type Reasoner[B any] interface {
+	// intentional the internal state
+	Purge()
+
 	// Deduct new goal for the agent to pursue.
 	Deduct(State[B]) (Phase, chatter.Prompt, error)
 }

@@ -14,7 +14,8 @@ import (
 	"os"
 
 	"github.com/kshard/chatter"
-	"github.com/kshard/chatter/bedrock"
+	"github.com/kshard/chatter/aio"
+	"github.com/kshard/chatter/llm/bedrock"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
@@ -48,7 +49,10 @@ func main() {
 	// We create an agent that executes the workflow.
 	agt := agent.NewWorker(
 		// enable debug output for LLMs dialog
-		chatter.NewDebugger(os.Stdout, llm),
+		aio.NewLogger(os.Stdout, llm),
+
+		// Number of attempts to resolve the task
+		4,
 
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, we use an encoder that builds prompt.

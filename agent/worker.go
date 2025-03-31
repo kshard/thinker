@@ -9,8 +9,6 @@
 package agent
 
 import (
-	"fmt"
-
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/codec"
@@ -28,6 +26,7 @@ type Worker[A any] struct {
 
 func NewWorker[A any](
 	llm chatter.Chatter,
+	attempts int,
 	encoder thinker.Encoder[A],
 	registry *command.Registry,
 ) *Worker[A] {
@@ -40,7 +39,7 @@ func NewWorker[A any](
 			You are automomous agent who uses tools to perform required tasks.
 			You are using and remember context from earlier chat history to execute the task.
 		`),
-		reasoner.NewEpoch(4, reasoner.From(w.deduct)),
+		reasoner.NewEpoch(attempts, reasoner.NewCmdSeq()),
 		codec.FromEncoder(w.encode),
 		registry,
 	)
@@ -55,34 +54,4 @@ func (w *Worker[A]) encode(in A) (prompt chatter.Prompt, err error) {
 	}
 
 	return
-}
-
-func (w *Worker[A]) deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
-	// the registry has failed to execute command, we have to supply the feedback to LLM
-	if state.Feedback != nil && state.Confidence < 1.0 {
-		var prompt chatter.Prompt
-		prompt.WithTask("Refine the previous prompt using the feedback below.")
-		prompt.With(state.Feedback)
-
-		return thinker.AGENT_REFINE, prompt, nil
-	}
-
-	// the workflow has successfully completed
-	// Note: pseudo-command return is executed
-	if state.Reply.Cmd == command.RETURN {
-		return thinker.AGENT_RETURN, chatter.Prompt{}, nil
-	}
-
-	// the workflow step is completed
-	if state.Reply.Cmd == command.BASH {
-		var prompt chatter.Prompt
-		prompt.WithTask("Continue the workflow execution.")
-		prompt.With(
-			chatter.Blob("The command has returned:\n", state.Reply.Output),
-		)
-
-		return thinker.AGENT_ASK, prompt, nil
-	}
-
-	return thinker.AGENT_ABORT, chatter.Prompt{}, fmt.Errorf("unknown state")
 }

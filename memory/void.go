@@ -25,6 +25,9 @@ func NewVoid(stratum chatter.Stratum) *Void {
 	return &Void{stratum: stratum}
 }
 
+// intentional the loss of memories, including facts, information and experiences
+func (s *Void) Purge() {}
+
 // Commit new observation into memory.
 func (s *Void) Commit(e *thinker.Observation) {}
 

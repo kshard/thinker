@@ -22,6 +22,9 @@ import (
 //
 // See package `memory` that implements various algorithms
 type Memory interface {
+	// intentional the loss of memories, including facts, information and experiences
+	Purge()
+
 	// Commit new observation into memory.
 	Commit(*Observation)
 

@@ -14,7 +14,8 @@ import (
 	"os"
 
 	"github.com/kshard/chatter"
-	"github.com/kshard/chatter/bedrock"
+	"github.com/kshard/chatter/aio"
+	"github.com/kshard/chatter/llm/bedrock"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
@@ -91,7 +92,7 @@ func main() {
 	// We create an agent that executes the workflow.
 	agt := agent.NewAutomata(
 		// enable debug output for LLMs dialog
-		chatter.NewDebugger(os.Stdout, llm),
+		aio.NewLogger(os.Stdout, llm),
 
 		// Configures memory for the agent. Typically, memory retains all of
 		// the agent's observations. Here, we use a stream memory that holds all observations.

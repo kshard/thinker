@@ -16,7 +16,7 @@ import (
 	"github.com/fogfish/golem/pipe"
 	"github.com/fogfish/golem/pure/monoid"
 	"github.com/kshard/chatter"
-	"github.com/kshard/chatter/bedrock"
+	"github.com/kshard/chatter/llm/bedrock"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
