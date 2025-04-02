@@ -10,14 +10,26 @@ package xfs
 
 import (
 	"context"
+	"io"
 	"io/fs"
 	"strings"
-
-	"github.com/fogfish/stream"
 )
 
+type FD = interface {
+	io.Writer
+	io.Closer
+	Stat() (fs.FileInfo, error)
+	Cancel() error
+}
+
+type FileSystem interface {
+	fs.FS
+	Create(path string, attr *struct{}) (FD, error)
+	Remove(path string) error
+}
+
 type XFS struct {
-	fsys stream.CreateFS[struct{}]
+	fsys FileSystem
 }
 
 type File struct {
@@ -25,7 +37,7 @@ type File struct {
 	Bytes []byte
 }
 
-func New(fsys stream.CreateFS[struct{}]) *XFS {
+func New(fsys FileSystem) *XFS {
 	return &XFS{
 		fsys: fsys,
 	}
@@ -72,7 +84,7 @@ func (xfs *XFS) Read(path string) (File, error) {
 }
 
 // Write file
-func (xfs *XFS) Write(file File) (File, error) {
+func (xfs *XFS) Create(file File) (File, error) {
 	fd, err := xfs.fsys.Create(file.Path, nil)
 	if err != nil {
 		return file, err
@@ -84,6 +96,15 @@ func (xfs *XFS) Write(file File) (File, error) {
 	}
 
 	err = fd.Close()
+	if err != nil {
+		return file, err
+	}
+
+	return file, nil
+}
+
+func (xfs *XFS) Remove(file File) (File, error) {
+	err := xfs.fsys.Remove(file.Path)
 	if err != nil {
 		return file, err
 	}

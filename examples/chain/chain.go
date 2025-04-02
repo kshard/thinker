@@ -13,34 +13,25 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fogfish/golem/pipe"
+	"github.com/fogfish/golem/pipe/v2"
 	"github.com/fogfish/golem/pure/monoid"
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/llm/bedrock"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
-	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
-	"github.com/kshard/thinker/memory"
-	"github.com/kshard/thinker/reasoner"
 )
 
 //------------------------------------------------------------------------------
 
 // The agent creates short-stoty, see Hello World example for details
 type AgentA struct {
-	*agent.Automata[string, string]
+	*agent.Prompter[string]
 }
 
 func NewAgentA(llm chatter.Chatter) *AgentA {
 	agt := &AgentA{}
-	agt.Automata = agent.NewAutomata(llm,
-		memory.NewVoid(""),
-		reasoner.NewVoid[string](),
-		codec.FromEncoder(agt.story),
-		codec.DecoderID,
-	)
-
+	agt.Prompter = agent.NewPrompter(llm, agt.story)
 	return agt
 }
 
@@ -53,26 +44,15 @@ func (AgentA) story(subj string) (prompt chatter.Prompt, err error) {
 
 // The agent creates workflow to process local files, see Script example for details
 type AgentB struct {
-	*agent.Automata[string, thinker.CmdOut]
-	registry *command.Registry
+	*agent.Worker[string]
 }
 
 func NewAgentB(llm chatter.Chatter) *AgentB {
+	registry := command.NewRegistry()
+	registry.Register(command.Bash("MacOS", "/tmp/script"))
+
 	agt := &AgentB{}
-
-	agt.registry = command.NewRegistry()
-	agt.registry.Register(command.Bash("MacOS", "/tmp/script"))
-	agt.registry.Register(command.Return())
-
-	agt.Automata = agent.NewAutomata(llm,
-		memory.NewStream(memory.INFINITE, `
-			You are automomous agent who uses tools to perform required tasks.
-			You are using and remember context from earlier chat history to execute the task.
-		`),
-		reasoner.NewEpoch(4, agt),
-		agt,
-		agt.registry,
-	)
+	agt.Worker = agent.NewWorker(llm, 4, thinker.Encoder[string](agt), registry)
 
 	return agt
 }
@@ -84,39 +64,7 @@ func (agt AgentB) Encode(string) (prompt chatter.Prompt, err error) {
 		(2) Analyse file content and answer the question: Who is main character in the story? Remember the answer in your context.
 		(3) Return all Remembered answers as comma separated string.`)
 
-	// Inject tools
-	agt.registry.Harden(&prompt)
 	return
-}
-
-func (AgentB) Deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, chatter.Prompt, error) {
-	// the registry has failed to execute command, we have to supply the feedback to LLM
-	if state.Feedback != nil && state.Confidence < 1.0 {
-		var prompt chatter.Prompt
-		prompt.WithTask("Refine the previous workflow step using the feedback below.")
-		prompt.With(state.Feedback)
-
-		return thinker.AGENT_REFINE, prompt, nil
-	}
-
-	// the workflow has successfully completed
-	// Note: pseudo-command return is executed
-	if state.Reply.Cmd == command.RETURN {
-		return thinker.AGENT_RETURN, chatter.Prompt{}, nil
-	}
-
-	// the workflow step is completed
-	if state.Reply.Cmd == command.BASH {
-		var prompt chatter.Prompt
-		prompt.WithTask("Continue the workflow execution.")
-		prompt.With(
-			chatter.Blob("The command has returned:\n", state.Reply.Output),
-		)
-
-		return thinker.AGENT_ASK, prompt, nil
-	}
-
-	return thinker.AGENT_ABORT, chatter.Prompt{}, fmt.Errorf("unknown state")
 }
 
 //------------------------------------------------------------------------------
@@ -145,29 +93,19 @@ func main() {
 	who := pipe.Seq("Cat", "Dog", "Cow", "Pig")
 
 	// Use agent to transform input into story
-	story := pipe.StdErr(pipe.Map(ctx, who,
-		func(x string) (string, error) {
-			return agtA.Prompt(context.Background(), x)
-		},
-	))
+	story := pipe.StdErr(pipe.Map(ctx, who, pipe.Lift(agtA.Seek)))
 
 	// Write stories into file system
-	file := pipe.StdErr(pipe.Map(ctx, story, txt2file))
+	file := pipe.StdErr(pipe.Map(ctx, story, pipe.Lift(txt2file)))
 
 	// Wait until all files are written
 	syn := pipe.Fold(ctx, file, mString)
 
 	// Use agent to conduct analysis of local files
-	act := pipe.StdErr(pipe.Map(ctx, syn,
-		func(x string) (thinker.CmdOut, error) {
-			return agtB.Prompt(context.Background(), x)
-		},
-	))
+	act := pipe.StdErr(pipe.Map(ctx, syn, pipe.Lift(agtB.Echo)))
 
 	// Output the result of the pipeline
-	<-pipe.ForEach(ctx, act,
-		func(x thinker.CmdOut) { fmt.Printf("==> %s\n", x.Output) },
-	)
+	<-pipe.ForEach(ctx, act, pipe.Pure(stdout))
 
 	close()
 }
@@ -186,3 +124,8 @@ func txt2file(x string) (string, error) {
 
 // naive string monoid
 var mString = monoid.FromOp("", func(a string, b string) string { return a + " " + b })
+
+func stdout(x thinker.CmdOut) thinker.CmdOut {
+	fmt.Printf("==> %s\n", x.Output)
+	return x
+}

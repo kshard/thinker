@@ -56,8 +56,8 @@ github.com/fogfish/golem/hseq v1.3.0 h1:WIJViOF7vsPHvqVLzFrIz4QrBI4EPTC34esrQnjq
 github.com/fogfish/golem/hseq v1.3.0/go.mod h1:17XORt8nNKl6KOhF43MHSmjK8NksbkBsohAoJGiinUs=
 github.com/fogfish/golem/optics v0.14.0 h1:8XFZ6rlr6GlwDPB/jUtEcPbFngbpY9DfArDXcFN2mts=
 github.com/fogfish/golem/optics v0.14.0/go.mod h1:aTXUA/VC6yu3zbUN1Tmy4Z4IW0jxfDFF4c2UB5MuwkA=
-github.com/fogfish/golem/pipe v1.2.0 h1:bqgQyeM2WXNIK/vHAYPd/dlJvkwgEo9soZ/F2aKeII8=
-github.com/fogfish/golem/pipe v1.2.0/go.mod h1:q1xvM0TAkQmIebFOJOnZ+LIIaqUd+ztwI0PSbQzSuos=
+github.com/fogfish/golem/pipe/v2 v2.0.1 h1:cJ4UrN3SyaGdOFpSs6gzQ+OVO/82G8/PeeTqt6JAfUo=
+github.com/fogfish/golem/pipe/v2 v2.0.1/go.mod h1:XNYxwHAJSZ+DdxA1UAGCM7zSoz6dfz70ISBowmZLM8k=
 github.com/fogfish/golem/pure v0.10.1 h1:0+cnvdaV9zF+0NN8SZMgR5bgFM6yNfBHU4rynYSDfmE=
 github.com/fogfish/golem/pure v0.10.1/go.mod h1:kLPfgu5uKP0CrwVap7jejisRwV7vo1q8Eyqnc/Z0qyw=
 github.com/fogfish/guid/v2 v2.1.0 h1:oEJHKM4yFOOCmKZdh0oH7eD3mL32n2+1YCc27lXB5rE=

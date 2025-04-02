@@ -1,11 +1,13 @@
 module github.com/kshard/thinker/examples
 
-go 1.23.1
+go 1.24
+
+toolchain go1.24.1
 
 replace github.com/kshard/thinker => ../
 
 require (
-	github.com/fogfish/golem/pipe v1.2.0
+	github.com/fogfish/golem/pipe/v2 v2.0.1
 	github.com/fogfish/golem/pure v0.10.1
 	github.com/kshard/chatter v0.5.1
 	github.com/kshard/chatter/llm/bedrock v0.3.1
