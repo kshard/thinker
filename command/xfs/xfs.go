@@ -50,6 +50,7 @@ func (xfs *XFS) Walk(ctx context.Context, dir string, ext string) (<-chan string
 
 	go func() {
 		defer close(out)
+		defer close(exx)
 		exx <- fs.WalkDir(xfs.fsys, dir,
 			func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
@@ -83,7 +84,7 @@ func (xfs *XFS) Read(path string) (File, error) {
 	return File{Path: path, Bytes: b}, nil
 }
 
-// Write file
+// Create file, writinh the content out
 func (xfs *XFS) Create(file File) (File, error) {
 	fd, err := xfs.fsys.Create(file.Path, nil)
 	if err != nil {
@@ -103,6 +104,7 @@ func (xfs *XFS) Create(file File) (File, error) {
 	return file, nil
 }
 
+// Remove file
 func (xfs *XFS) Remove(file File) (File, error) {
 	err := xfs.fsys.Remove(file.Path)
 	if err != nil {
@@ -110,4 +112,26 @@ func (xfs *XFS) Remove(file File) (File, error) {
 	}
 
 	return file, nil
+}
+
+// Lift agent into file system I/O context
+func Echo(w interface{ Echo(string) (string, error) }) func(File) (File, error) {
+	return func(in File) (File, error) {
+		reply, err := w.Echo(string(in.Bytes))
+		if err != nil {
+			return in, err
+		}
+		return File{Path: in.Path, Bytes: []byte(reply)}, nil
+	}
+}
+
+// Lift agent into file system I/O context
+func Seek(w interface{ Seek(string) (string, error) }) func(File) (File, error) {
+	return func(in File) (File, error) {
+		reply, err := w.Seek(string(in.Bytes))
+		if err != nil {
+			return in, err
+		}
+		return File{Path: in.Path, Bytes: []byte(reply)}, nil
+	}
 }
