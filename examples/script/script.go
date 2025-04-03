@@ -15,7 +15,7 @@ import (
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/aio"
-	"github.com/kshard/chatter/llm/bedrock"
+	"github.com/kshard/chatter/llm/autoconfig"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
@@ -80,11 +80,8 @@ func main() {
 	// enable pseudo tool for LLM to emphasis completion of the task
 	registry.Register(command.Return())
 
-	// create instance of LLM client
-	llm, err := bedrock.New(
-		bedrock.WithLLM(bedrock.LLAMA3_1_70B_INSTRUCT),
-		bedrock.WithRegion("us-west-2"),
-	)
+	// create instance of LLM API, see doc/HOWTO.md for details
+	llm, err := autoconfig.New("thinker")
 	if err != nil {
 		panic(err)
 	}
