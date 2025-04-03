@@ -48,5 +48,4 @@ machine chatter1
   provider openai
   host http://localhost:1234
   model gemma-3-27b-it
-  secret sk-...IA
 ```
