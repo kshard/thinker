@@ -16,7 +16,7 @@ import (
 	"github.com/fogfish/golem/pipe/v2"
 	"github.com/fogfish/golem/pure/monoid"
 	"github.com/kshard/chatter"
-	"github.com/kshard/chatter/llm/bedrock"
+	"github.com/kshard/chatter/llm/autoconfig"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/command"
@@ -70,11 +70,8 @@ func (agt AgentB) Encode(string) (prompt chatter.Prompt, err error) {
 //------------------------------------------------------------------------------
 
 func main() {
-	// create instance of LLM client
-	llm, err := bedrock.New(
-		bedrock.WithLLM(bedrock.LLAMA3_1_70B_INSTRUCT),
-		bedrock.WithRegion("us-west-2"),
-	)
+	// create instance of LLM API, see doc/HOWTO.md for details
+	llm, err := autoconfig.New("thinker")
 	if err != nil {
 		panic(err)
 	}

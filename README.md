@@ -66,7 +66,7 @@ Running the examples you need access either to AWS Bedrock or OpenAI.
 
 ## Quick example
 
-See ["Hello World"](./examples/helloworld/hw.go) application as the quick start. The example agent is `ƒ: string ⟼ string` that takes the sentence and returns the anagram.
+See ["Hello World"](./examples/helloworld/hw.go) application as the quick start. The example agent is `ƒ: string ⟼ string` that takes the sentence and returns the anagram. [HowTo](./doc/HOWTO.md) gives support to bootstrap it.
 
 ```go
 package main
@@ -110,11 +110,8 @@ func anagram(expr string) (prompt chatter.Prompt, err error) {
 }
 
 func main() {
-  // create instance of LLM client
-  llm, err := bedrock.New(
-    bedrock.WithLLM(bedrock.LLAMA3_1_70B_INSTRUCT),
-    bedrock.WithRegion("us-west-2"),
-  )
+  // create instance of LLM API, see doc/HOWTO.md for details
+  llm, err := autoconfig.New("thinker")
   if err != nil {
     panic(err)
   }
