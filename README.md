@@ -48,9 +48,12 @@ In this library, an agent is defined as a side-effect function `ƒ: A ⟼ B`, wh
 - [Getting started](#getting-started)
 - [Quick example](#quick-example)
 - [Agent Architecture](#agent-architecture)
+  - [Memory](#memory)
+  - [Reasoner](#reasoner)
+  - [Encoder \& Decoder](#encoder--decoder)
   - [Commands \& Tools](#commands--tools)
-    - [Supported commands](#supported-commands)
-  - [Chaining agents](#chaining-agents)
+  - [Agent profiles](#agent-profiles)
+- [Agent chains](#agent-chains)
 - [FAQ](#faq)
 - [How To Contribute](#how-to-contribute)
   - [commit message](#commit-message)
@@ -66,7 +69,7 @@ Running the examples you need access either to AWS Bedrock or OpenAI.
 
 ## Quick example
 
-See ["Hello World"](./examples/helloworld/hw.go) application as the quick start. The example agent is `ƒ: string ⟼ string` that takes the sentence and returns the anagram. [HowTo](./doc/HOWTO.md) gives support to bootstrap it.
+See ["Hello World"](./examples/helloworld/hw.go) application as the quick start. The example agent is `ƒ: string ⟼ string` that takes the sentence and returns the anagram. [HowTo](./doc/HOWTO.md) gives support to bootstrap it. The library ships more [examples](./examples/) to demonstrate library's capabilities.
 
 ```go
 package main
@@ -77,13 +80,10 @@ import (
 
   // LLMs toolkit
   "github.com/kshard/chatter"
-  "github.com/kshard/chatter/bedrock"
+  "github.com/kshard/chatter/llm/autoconfig"
 
   // Agents toolkit
   "github.com/kshard/thinker/agent"
-  "github.com/kshard/thinker/codec"
-  "github.com/kshard/thinker/memory"
-  "github.com/kshard/thinker/reasoner"
 )
 
 // This function is core in the example. It takes input (the sentence)
@@ -116,26 +116,9 @@ func main() {
     panic(err)
   }
 
-  // We create an agent that takes string (sentence) and returns string (anagram).
-  agt := agent.NewAutomata(llm,
-    // Configures memory for the agent. Typically, memory retains all of
-    // the agent's observations. Here, we use a void memory, meaning no
-    // observations are retained.
-    memory.NewVoid(),
-
-    // Configures the reasoner, which determines the agent's next actions and prompts.
-    // Here, we use a void reasoner, meaning no reasoning is performed—the agent
-    // simply returns the result.
-    reasoner.NewVoid[string, string](),
-
-    // Configures the encoder to transform input of type A into a `chatter.Prompt`.
-    // Here, we use an encoder that converts string expressions into prompt.
-    codec.FromEncoder(anagram),
-
-    // Configure the decoder to transform output of LLM into type B.
-    // Here, we use the identity decoder that returns LLMs output as-is.
-    codec.DecoderID,
-  )
+	// Create an agent that takes string (sentence) and returns string (anagram).
+	// Stateless and memory less agent is used
+	agt := agent.NewPrompter(llm, anagram)
 
   // Evaluate expression and receive the result
   val, err := agt.Prompt(context.Background(), "a gentleman seating on horse")
@@ -175,13 +158,93 @@ graph TD
     end
 ```
 
+Following this architecture, the agent is assembled from building blocks as lego constructor:
+
+```go
+agent.NewAutomata(
+  // LLM used by the agent to solve the task
+  llm,
+
+  // Configures memory for the agent. Typically, memory retains all of
+  // the agent's observations. Here, we use a stream memory that holds all observations.
+  memory.NewStream(memory.INFINITE, "You are agent..."),
+
+  // Configures the reasoner, which determines the agent's next actions and prompts.
+  reasoner.From(deduct),
+
+  // Configures the encoder to transform input of type A into a `chatter.Prompt`.
+  // Here, we use an encoder that builds prompt.
+  codec.FromEncoder(encode),
+
+  // Configure the decoder to transform output of LLM into type B.
+  codec.FromDecoder(decode),
+)
+```
+
+The [rainbow example](./examples/rainbow/rainbow.go) demonstrates a simple agent that effectively utilizes the depicted agent architecture to solve a task.
+
+### Memory
+
 [`Memory`](./memory.go) is core element of agents behaviour. It is a database that maintains a comprehensive record of an agent’s experience. It recalls observations and builds the context windows to be used for prompting.
 
-[`Reasoner`](./reasoner.go) serves as the goal-setting component in the architecture. It evaluates the agent's current state, performing either deterministic or non-deterministic analysis of immediate results and past experiences. Based on this assessment, it determines whether the goal has been achieved and, if not, suggests the best new goal for the agent to pursue.
+The following [memory classes](https://pkg.go.dev/github.com/kshard/thinker/memory) are supported:
+* *Void* does not retain any observations.
+* *Stream* retains all of the agent's observations in the time ordered sequence. It is possible to re-call last N observations. 
+
+
+### Reasoner
+
+[`Reasoner`](./reasoner.go) serves as the goal-setting component in the architecture. It evaluates the agent's current state, performing either deterministic or non-deterministic analysis of immediate results and past experiences. Based on this assessment, it determines whether the goal has been achieved and, if not, suggests the best new goal for the agent to pursue. It maintain the following statemachine orchestrating the agent:
+
+```go
+const (
+	// Agent is asking for new facts from LLM
+	AGENT_ASK Phase = iota
+	// Agent has a final result to return
+	AGENT_RETURN
+	// Agent should retry with the same context
+	AGENT_RETRY
+	// Agent should refine the prompt based on feedback
+	AGENT_REFINE
+	// Agent aborts processing due to unrecoverable error
+	AGENT_ABORT
+)
+```
+
+The following [reasoner classes](https://pkg.go.dev/github.com/kshard/thinker/reasoner) are supported:
+* *Void* always sets a new goal to return results.
+* *Cmd* sets the goal for agent to execute a single command and return the result if/when successful.
+* *CmdSeq* sets the goal for reasoner to execute sequence of commands.
+* *From* is fundamental constuctor for application specific reasoners.
+* *Epoch* is pseudo reasoner, it limits number of itterations agent takes to solve a task.
+
+```go
+func deduct(state thinker.State[B]) (thinker.Phase, chatter.Prompt, error) {
+  // define reasoning strategy
+  return thinker.AGENT_RETURN, chatter.Prompt{}, nil 
+}
+
+reasoner.From(deduct)
+```
+
+### Encoder & Decoder
 
 The type-safe agent interface `ƒ: A ⟼ B` is well-suited for composition and agent chaining. However, encoding and decoding application-specific types must be abstracted. To facilitate this, the library provides two key traits: [`Encoder`](./codec.go) for constructing prompts and [`Decoder`](./codec.go) for parsing and validating LLM responses.
 
-The [rainbow example](./examples/rainbow/rainbow.go) demonstrates a simple agent that effectively utilizes the depicted agent architecture to solve a task.
+The following [codec classes](https://pkg.go.dev/github.com/kshard/thinker/reasoner) are supported:
+* *EncoderID* and *DecoderID* are identity codec taking and producing strings as-is.
+* *FromEncoder* and *FromDecoder* are fundamental constuctor for application specific codecs.
+
+```go
+// Encode type A to prompt
+func encoder[A any](A) (prompt chatter.Prompt, err error) { /* ... */ }
+
+// Decode LLMs response to `B` 
+func decoder[B any](reply chatter.Reply) (float64, B, error)  { /* ... */ }
+
+codec.FromEncoder(encoder)
+codec.FromDecoder(decoder)
+```
 
 ### Commands & Tools
 
@@ -191,16 +254,23 @@ When constructing a prompt, it is essential to include a section that "advertise
 
 The [script example](./examples/script/script.go) demonstrates a simple agent that utilizes `bash` to generate and modify files on the local filesystem.
 
-#### Supported commands
-* `bash` execute bash script or single command
-* `golang` execute golang code block
-* `python` execute python code block
+The following commands are supported
+* *bash* execute bash script or single command
+* *golang* execute golang code block
+* *python* execute python code block
 
-### Chaining agents
+### Agent profiles
+
+The application assembles agents from three elements: memory, reasoner and codecs. To simplfy the development, there are few built-in profiles that configures it:
+* `Prompter` is ask-reply from LLM;
+* `Worker` uses LLMs and external tools to solve the task. 
+
+
+## Agent chains
 
 The `thinker` library does not provide built-in mechanisms for chaining agents. Instead, it encourages the use of standard Go techniques either pure functional chaining or chaining of go routines (e.g. [golem/pipe](https://github.com/fogfish/golem)). 
 
-The [chain example](./examples/chain/chain.go) demostrates off-the-shelf techniques for agents chaining.
+The [chain example](./examples/05_chain/chain.go) demostrates off-the-shelf techniques for agents chaining.
 
 
 ## FAQ
