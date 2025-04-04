@@ -311,7 +311,7 @@ func (*Agent) Deduct(thinker.State[string]) (thinker.Phase, chatter.Prompt, erro
 You might consider a AWS Serverless solution for hosting agents.
 AWS Step Functions makes chaining of agents out-of-the-box, which is recommended approach.
 
-You might consider [typestep library](https://github.com/fogfish/typestep) that provides a simplisitc approach for defining AWS Step Functions using a type-safe notation in Go.
+You might consider [typestep library](https://github.com/fogfish/typestep) that provides a simplistic approach for defining AWS Step Functions using a type-safe notation in Go.
 </details>
 
 
