@@ -6,3 +6,4 @@
 4. ["Worker"](./04_worker/) is like a "Script" but uses built-in worker profile for same purpose.
 5. ["Chain"](./05_chain/) chaining multiple agents togthere.
 6. ["Text Processor"](./06_text_processor/processor.go) chaining multiple computational units (agents, functions, etc) to process files.
+7. ["AWS Chain](./07_aws_sfs/sfs.go) chaining multiple agents togthere using AWS Step Function. Use `cdk deploy` to deploy stack.  

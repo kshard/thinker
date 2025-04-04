@@ -30,11 +30,6 @@ func NewPrompter[A any](llm chatter.Chatter, f func(A) (chatter.Prompt, error)) 
 		// observations are retained.
 		memory.NewVoid(""),
 
-		// Configures the reasoner, which determines the agent's next actions and prompts.
-		// Here, we use a void reasoner, meaning no reasoning is performed—the agent
-		// simply returns the result.
-		reasoner.NewVoid[string](),
-
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, we use an encoder that converts input into prompt.
 		codec.FromEncoder(f),
@@ -42,6 +37,11 @@ func NewPrompter[A any](llm chatter.Chatter, f func(A) (chatter.Prompt, error)) 
 		// Configure the decoder to transform output of LLM into type B.
 		// Here, we use the identity decoder that returns LLMs output as-is.
 		codec.DecoderID,
+
+		// Configures the reasoner, which determines the agent's next actions and prompts.
+		// Here, we use a void reasoner, meaning no reasoning is performed—the agent
+		// simply returns the result.
+		reasoner.NewVoid[string](),
 	)
 
 	return w

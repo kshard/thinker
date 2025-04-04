@@ -12,14 +12,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fogfish/golem/pipe/v2"
 	"github.com/fogfish/stream/lfs"
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/llm/autoconfig"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
-	"github.com/kshard/thinker/command/xfs"
+	"github.com/kshard/thinker/x/xfs"
 )
 
 func bootstrap(n int) (prompt chatter.Prompt, err error) {
@@ -40,11 +39,6 @@ func processor(s string) (prompt chatter.Prompt, err error) {
 	return
 }
 
-func show(x string) string {
-	fmt.Printf("==> %s\n", x)
-	return x
-}
-
 func main() {
 	llm, err := autoconfig.New("thinker")
 	if err != nil {
@@ -53,11 +47,11 @@ func main() {
 
 	// In this example, we need to mount two file systems, containing input and
 	// output data.
-	in, err := lfs.New("/tmp/script/txt")
+	r, err := lfs.New("/tmp/script/txt")
 	if err != nil {
 		panic(err)
 	}
-	to, err := lfs.New("/tmp/script/kwd")
+	w, err := lfs.New("/tmp/script/kwd")
 	if err != nil {
 		panic(err)
 	}
@@ -71,30 +65,36 @@ func main() {
 		panic(err)
 	}
 
-	// Creating the FileSystem I/O utility
-	rfs := xfs.New(in)
-	wfs := xfs.New(to)
-
 	// create worker to extract keywords from text files
 	wrk := agent.NewPrompter(llm, processor)
 
-	// Create processing pipeline
 	fmt.Printf("==> processing files ...\n")
-	ctx, cancel := context.WithCancel(context.Background())
+	xfs.NewWorker(r, w).
+		Walk(context.Background(), "/",
+			func(ctx context.Context, w *xfs.Worker, path string) error {
+				fmt.Printf("==> %s\n", path)
 
-	// 1. Walk over file system
-	a, errA := rfs.Walk(ctx, "/", "")
-	// 2. Print file name
-	b := pipe.StdErr(pipe.Map(ctx, a, pipe.Pure(show)))
-	// 3. Read the file
-	c, errC := pipe.Map(ctx, b, pipe.Try(rfs.Read))
-	// 4. Process the file with agent
-	d, errD := pipe.Map(ctx, c, pipe.Try(xfs.Echo(wrk)))
-	// 5. Write agents output to the new file, preserving the name
-	e, errE := pipe.Map(ctx, d, pipe.Try(wfs.Create))
-	// 6. Remove input file
-	f, errF := pipe.Map(ctx, e, pipe.Try(rfs.Remove))
+				txt, err := w.ReadFile(path)
+				if err != nil {
+					return err
+				}
 
-	<-pipe.Void(ctx, pipe.StdErr(f, pipe.Join(ctx, errA, errC, errD, errE, errF)))
-	cancel()
+				kwd, err := wrk.PromptOnce(ctx, string(txt))
+				if err != nil {
+					return err
+				}
+
+				err = w.WriteFile(path, []byte(kwd))
+				if err != nil {
+					return err
+				}
+
+				err = w.Reader.Remove(path)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+		)
 }

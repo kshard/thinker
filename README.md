@@ -53,7 +53,7 @@ In this library, an agent is defined as a side-effect function `ƒ: A ⟼ B`, wh
   - [Encoder \& Decoder](#encoder--decoder)
   - [Commands \& Tools](#commands--tools)
   - [Agent profiles](#agent-profiles)
-- [Agent chains](#agent-chains)
+- [Agent composition (chaining)](#agent-composition-chaining)
 - [FAQ](#faq)
 - [How To Contribute](#how-to-contribute)
   - [commit message](#commit-message)
@@ -266,11 +266,13 @@ The application assembles agents from three elements: memory, reasoner and codec
 * `Worker` uses LLMs and external tools to solve the task. 
 
 
-## Agent chains
+## Agent composition (chaining)
 
-The `thinker` library does not provide built-in mechanisms for chaining agents. Instead, it encourages the use of standard Go techniques either pure functional chaining or chaining of go routines (e.g. [golem/pipe](https://github.com/fogfish/golem)). 
+The `thinker` library does not provide built-in mechanisms for chaining agents. Instead, it encourages the use of ideomatic Go, pure functional chaining. 
 
-The [chain example](./examples/05_chain/chain.go) demostrates off-the-shelf techniques for agents chaining.
+The ["Chain" example](./examples/05_chain/chain.go) demostrates off-the-shelf techniques for agents chaining.
+
+The ["Text Processor" example](./06_text_processor/processor.go) demostrates chaining agnet with file system I/O.
 
 
 ## FAQ
@@ -303,6 +305,14 @@ func (*Agent) Decode(chatter.Reply) (float64, string, error) { /* ... */ }
 
 func (*Agent) Deduct(thinker.State[string]) (thinker.Phase, chatter.Prompt, error) { /* ... */ }
 ```
+</details>
+
+<details>
+<summary>How to deploy agents to AWS?</summary>
+You might consider a AWS Serverless solution for hosting agents.
+AWS Step Functions makes chaining of agents out-of-the-box, which is recommended approach.
+
+You might consider [typestep library](https://github.com/fogfish/typestep) that provides a simplisitc approach for defining AWS Step Functions using a type-safe notation in Go.
 </details>
 
 

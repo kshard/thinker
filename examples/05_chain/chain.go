@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fogfish/golem/pipe/v2"
-	"github.com/fogfish/golem/pure/monoid"
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/llm/autoconfig"
 	"github.com/kshard/thinker"
@@ -81,48 +79,38 @@ func main() {
 	agtB := NewAgentB(llm)
 
 	//
-	// chaining agents using Go channels and fogfish/golem/pipe
+	// chaining agents using pure Go
+	for _, who := range []string{"Cat", "Dog", "Cow", "Pig"} {
+		// Use agent to transform animal input into story
+		story, err := agtA.PromptOnce(context.Background(), who)
+		if err != nil {
+			panic(err)
+		}
 
-	// create context to manage the chain
-	ctx, close := context.WithCancel(context.Background())
-
-	// Input to the chain
-	who := pipe.Seq("Cat", "Dog", "Cow", "Pig")
-
-	// Use agent to transform input into story
-	story := pipe.StdErr(pipe.Map(ctx, who, pipe.Lift(agtA.Seek)))
-
-	// Write stories into file system
-	file := pipe.StdErr(pipe.Map(ctx, story, pipe.Lift(txt2file)))
-
-	// Wait until all files are written
-	syn := pipe.Fold(ctx, file, mString)
+		// Write stories into file system
+		err = txt2file(story)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	// Use agent to conduct analysis of local files
-	act := pipe.StdErr(pipe.Map(ctx, syn, pipe.Lift(agtB.Echo)))
+	reply, err := agtB.PromptOnce(context.Background(), "")
+	if err != nil {
+		panic(err)
+	}
 
-	// Output the result of the pipeline
-	<-pipe.ForEach(ctx, act, pipe.Pure(stdout))
-
-	close()
+	fmt.Printf("==> %s\n", reply.Output)
 }
 
-func txt2file(x string) (string, error) {
+func txt2file(x string) error {
 	fd, err := os.CreateTemp("/tmp/script", "*.txt")
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer fd.Close()
 	if _, err := fd.WriteString(x); err != nil {
-		return "", err
+		return err
 	}
-	return fd.Name(), nil
-}
-
-// naive string monoid
-var mString = monoid.FromOp("", func(a string, b string) string { return a + " " + b })
-
-func stdout(x thinker.CmdOut) thinker.CmdOut {
-	fmt.Printf("==> %s\n", x.Output)
-	return x
+	return nil
 }

@@ -98,11 +98,6 @@ func main() {
 			You are using and remember context from earlier chat history to execute the task.
 		`),
 
-		// Configures the reasoner, which determines the agent's next actions and prompts.
-		// Here, we use custom (app specific) reasoner. The agent is restricted to execute
-		// 4 itterattions before it fails.
-		reasoner.NewEpoch(4, reasoner.From(deduct)),
-
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, we use an encoder that builds prompt.
 		codec.FromEncoder(encode),
@@ -110,6 +105,11 @@ func main() {
 		// Configure the decoder to transform output of LLM into type B.
 		// Here, we use the tool registry to "decode" output into command call.
 		registry,
+
+		// Configures the reasoner, which determines the agent's next actions and prompts.
+		// Here, we use custom (app specific) reasoner. The agent is restricted to execute
+		// 4 itterattions before it fails.
+		reasoner.NewEpoch(4, reasoner.From(deduct)),
 	)
 
 	// Execute agent

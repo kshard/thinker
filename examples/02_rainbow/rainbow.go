@@ -97,11 +97,6 @@ func main() {
 		// the agent's observations. Here, we use a stream memory that holds all observations.
 		memory.NewStream(memory.INFINITE, "You are agent who remembers and uses earlier chat history."),
 
-		// Configures the reasoner, which determines the agent's next actions and prompts.
-		// Here, we use custom (app specific) reasoner. The agent is restricted to execute
-		// 4 itterattions before it fails.
-		reasoner.NewEpoch(4, reasoner.From(deduct)),
-
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, we use an encoder that builds prompt.
 		codec.FromEncoder(encode),
@@ -109,6 +104,11 @@ func main() {
 		// Configure the decoder to transform output of LLM into type B.
 		// Here, we use custom (app specific) codec that parses LLM response into []string.
 		codec.FromDecoder(decode),
+
+		// Configures the reasoner, which determines the agent's next actions and prompts.
+		// Here, we use custom (app specific) reasoner. The agent is restricted to execute
+		// 4 itterattions before it fails.
+		reasoner.NewEpoch(4, reasoner.From(deduct)),
 	)
 
 	// We ask agent about the rainbow colors.
