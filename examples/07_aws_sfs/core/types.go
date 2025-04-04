@@ -20,7 +20,7 @@ type Abstract struct {
 
 // Classified version of document
 type Keywords struct {
-	Keywords string `json:"type"`
+	Keywords string `json:"keywords"`
 	Text     string `json:"text"`
 }
 
