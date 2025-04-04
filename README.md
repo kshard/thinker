@@ -270,10 +270,9 @@ The application assembles agents from three elements: memory, reasoner and codec
 
 The `thinker` library does not provide built-in mechanisms for chaining agents. Instead, it encourages the use of ideomatic Go, pure functional chaining. 
 
-The ["Chain" example](./examples/05_chain/chain.go) demostrates off-the-shelf techniques for agents chaining.
+The ["Chain" example](./examples/05_chain/chain.go) demonstrates off-the-shelf techniques for agents chaining.
 
-The ["Text Processor" example](./06_text_processor/processor.go) demostrates chaining agnet with file system I/O.
-
+The ["Text Processor" example](./06_text_processor/processor.go) demonstrates chaining agnet with file system I/O.
 
 ## FAQ
 
