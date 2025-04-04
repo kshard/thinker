@@ -28,9 +28,9 @@ type Automata[A, B any] struct {
 func NewAutomata[A, B any](
 	llm chatter.Chatter,
 	memory thinker.Memory,
-	reasoner thinker.Reasoner[B],
 	encoder thinker.Encoder[A],
 	decoder thinker.Decoder[B],
+	reasoner thinker.Reasoner[B],
 ) *Automata[A, B] {
 	return &Automata[A, B]{
 		llm:      llm,
@@ -41,23 +41,16 @@ func NewAutomata[A, B any](
 	}
 }
 
-// Prompting agent to perform a work and forgeting the state.
-// The operation is composable using Go-channels
-func (automata *Automata[A, B]) Echo(in A) (B, error) {
-	automata.Purge()
-	return automata.Prompt(context.Background(), in)
-}
-
-// Prompting agent to perform a work and prerve the state.
-// The operation is composable using Go-channels
-func (automata *Automata[A, B]) Seek(in A) (B, error) {
-	return automata.Prompt(context.Background(), in)
-}
-
 // Purge automata's memory
 func (automata *Automata[A, B]) Purge() {
 	automata.reasoner.Purge()
 	automata.memory.Purge()
+}
+
+// Forget the agent state and prompt within a new session
+func (automata *Automata[A, B]) PromptOnce(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
+	automata.Purge()
+	return automata.Prompt(ctx, input, opt...)
 }
 
 // Prompt agent

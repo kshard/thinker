@@ -44,11 +44,6 @@ func NewWorker[A any](
 			You are using and remember context from earlier chat history to execute the task.
 		`),
 
-		// Configures the reasoner, which determines the agent's next actions and prompts.
-		// Here, we use a sequence of command reasoner, it assumes that input prompt is
-		// the workflow based on command. LLM guided to execute entire workflow.
-		reasoner.NewEpoch(attempts, reasoner.NewCmdSeq()),
-
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, it is defined by application
 		codec.FromEncoder(w.encode),
@@ -56,6 +51,11 @@ func NewWorker[A any](
 		// Configure the decoder to transform output of LLM into type B.
 		// The registry knows how to interpret the LLM's reply and executed the command.
 		registry,
+
+		// Configures the reasoner, which determines the agent's next actions and prompts.
+		// Here, we use a sequence of command reasoner, it assumes that input prompt is
+		// the workflow based on command. LLM guided to execute entire workflow.
+		reasoner.NewEpoch(attempts, reasoner.NewCmdSeq()),
 	)
 
 	return w
