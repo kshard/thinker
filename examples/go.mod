@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/jsii-runtime-go v1.109.0
 	github.com/fogfish/scud v0.10.5
-	github.com/fogfish/stream v1.2.2
+	github.com/fogfish/stream v1.2.3
 	github.com/fogfish/typestep v0.0.1
 	github.com/kshard/chatter v0.5.1
 	github.com/kshard/chatter/llm/autoconfig v0.0.1

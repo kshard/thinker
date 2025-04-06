@@ -28,7 +28,7 @@ func NewPrompter[A any](llm chatter.Chatter, f func(A) (chatter.Prompt, error)) 
 		// Configures memory for the agent. Typically, memory retains all of
 		// the agent's observations. Here, we use a void memory, meaning no
 		// observations are retained.
-		memory.NewVoid(""),
+		memory.NewVoid(`You are automomous agent who perform tasks defined in the prompt.`),
 
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, we use an encoder that converts input into prompt.

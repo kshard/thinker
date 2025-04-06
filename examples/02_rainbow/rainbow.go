@@ -20,9 +20,7 @@ import (
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
-	"github.com/kshard/thinker/memory"
 	"github.com/kshard/thinker/prompt/jsonify"
-	"github.com/kshard/thinker/reasoner"
 )
 
 // Ask LLMs about colors of rainbow
@@ -36,20 +34,6 @@ func encode(any) (prompt chatter.Prompt, err error) {
 	// Injects requirments for LLM to return json array of strings
 	jsonify.Strings.Harden(&prompt)
 	return
-}
-
-// Parse LLMs response into sequence of colors
-func decode(reply chatter.Reply) (float64, []string, error) {
-	var seq []string
-	if err := jsonify.Strings.Decode(reply, &seq); err != nil {
-		return 0.0, nil, err
-	}
-
-	if err := validate(seq); err != nil {
-		return 0.1, nil, err
-	}
-
-	return 1.0, seq, nil
 }
 
 // Validate sequence of colors, expecting invisible spectrum.
@@ -67,19 +51,33 @@ func validate(seq []string) error {
 	)
 }
 
-// deduct new goal for the agent to pursue.
-func deduct(state thinker.State[[]string]) (thinker.Phase, chatter.Prompt, error) {
-	// Provide feedback to LLM if there are no confidence about the results
-	if state.Feedback != nil && state.Confidence < 1.0 {
-		var prompt chatter.Prompt
-		prompt.WithTask("Refine the previous request using the feedback below.")
-		prompt.With(state.Feedback)
-		return thinker.AGENT_REFINE, prompt, nil
-	}
+// Parse LLMs response into sequence of colors
+// func decode(reply chatter.Reply) (float64, []string, error) {
+// 	var seq []string
+// 	if err := jsonify.Strings.Decode(reply, &seq); err != nil {
+// 		return 0.0, nil, err
+// 	}
 
-	// We have sufficient confidence, return results
-	return thinker.AGENT_RETURN, chatter.Prompt{}, nil
-}
+// 	if err := validate(seq); err != nil {
+// 		return 0.1, nil, err
+// 	}
+
+// 	return 1.0, seq, nil
+// }
+
+// deduct new goal for the agent to pursue.
+// func deduct(state thinker.State[[]string]) (thinker.Phase, chatter.Prompt, error) {
+// 	// Provide feedback to LLM if there are no confidence about the results
+// 	if state.Feedback != nil && state.Confidence < 1.0 {
+// 		var prompt chatter.Prompt
+// 		prompt.WithTask("Refine the previous request using the feedback below.")
+// 		prompt.With(state.Feedback)
+// 		return thinker.AGENT_REFINE, prompt, nil
+// 	}
+
+// 	// We have sufficient confidence, return results
+// 	return thinker.AGENT_RETURN, chatter.Prompt{}, nil
+// }
 
 func main() {
 	// create instance of LLM API, see doc/HOWTO.md for details
@@ -88,27 +86,19 @@ func main() {
 		panic(err)
 	}
 
-	// We create an agent that takes string (sentence) and returns string (anagram).
-	agt := agent.NewAutomata(
+	agt := agent.NewJsonify(
 		// enable debug output for LLMs dialog
 		aio.NewLogger(os.Stdout, llm),
 
-		// Configures memory for the agent. Typically, memory retains all of
-		// the agent's observations. Here, we use a stream memory that holds all observations.
-		memory.NewStream(memory.INFINITE, "You are agent who remembers and uses earlier chat history."),
+		// attempts to request JSON
+		4,
 
 		// Configures the encoder to transform input of type A into a `chatter.Prompt`.
 		// Here, we use an encoder that builds prompt.
 		codec.FromEncoder(encode),
 
-		// Configure the decoder to transform output of LLM into type B.
-		// Here, we use custom (app specific) codec that parses LLM response into []string.
-		codec.FromDecoder(decode),
-
-		// Configures the reasoner, which determines the agent's next actions and prompts.
-		// Here, we use custom (app specific) reasoner. The agent is restricted to execute
-		// 4 itterattions before it fails.
-		reasoner.NewEpoch(4, reasoner.From(deduct)),
+		// Validator function, checks correctness of response
+		validate,
 	)
 
 	// We ask agent about the rainbow colors.
