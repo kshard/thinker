@@ -51,34 +51,6 @@ func validate(seq []string) error {
 	)
 }
 
-// Parse LLMs response into sequence of colors
-// func decode(reply chatter.Reply) (float64, []string, error) {
-// 	var seq []string
-// 	if err := jsonify.Strings.Decode(reply, &seq); err != nil {
-// 		return 0.0, nil, err
-// 	}
-
-// 	if err := validate(seq); err != nil {
-// 		return 0.1, nil, err
-// 	}
-
-// 	return 1.0, seq, nil
-// }
-
-// deduct new goal for the agent to pursue.
-// func deduct(state thinker.State[[]string]) (thinker.Phase, chatter.Prompt, error) {
-// 	// Provide feedback to LLM if there are no confidence about the results
-// 	if state.Feedback != nil && state.Confidence < 1.0 {
-// 		var prompt chatter.Prompt
-// 		prompt.WithTask("Refine the previous request using the feedback below.")
-// 		prompt.With(state.Feedback)
-// 		return thinker.AGENT_REFINE, prompt, nil
-// 	}
-
-// 	// We have sufficient confidence, return results
-// 	return thinker.AGENT_RETURN, chatter.Prompt{}, nil
-// }
-
 func main() {
 	// create instance of LLM API, see doc/HOWTO.md for details
 	llm, err := autoconfig.New("thinker")
