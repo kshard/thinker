@@ -13,7 +13,6 @@ import (
 	"github.com/kshard/thinker"
 )
 
-// TODO: multiline return - codeblock
 
 // A unique name for return command
 const RETURN = "return"
