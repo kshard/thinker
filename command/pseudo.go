@@ -9,11 +9,10 @@
 package command
 
 import (
-	"strings"
-
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
 )
+
 
 // A unique name for return command
 const RETURN = "return"
@@ -23,10 +22,13 @@ func Return() thinker.Cmd {
 	return thinker.Cmd{
 		Cmd:    RETURN,
 		Short:  "indicate that workflow is completed, the agent return expected results",
-		Syntax: "return <value>",
+		Syntax: "return <codeblock>value to return</codeblock>",
 		Run: func(t chatter.Reply) (float64, thinker.CmdOut, error) {
-			s := strings.TrimSpace(t.Text)
-			return 1.0, thinker.CmdOut{Cmd: RETURN, Output: s}, nil
+			code, err := CodeBlock(RETURN, t.Text)
+			if err != nil {
+				return 0.00, thinker.CmdOut{Cmd: RETURN}, err
+			}
+			return 1.0, thinker.CmdOut{Cmd: RETURN, Output: code}, nil
 		},
 	}
 }
