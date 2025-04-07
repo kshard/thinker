@@ -27,7 +27,7 @@ func Return() thinker.Cmd {
 		Run: func(t chatter.Reply) (float64, thinker.CmdOut, error) {
 			code, err := CodeBlock(RETURN, t.Text)
 			if err != nil {
-				return 0.00, thinker.CmdOut{Cmd: GOLANG}, err
+				return 0.00, thinker.CmdOut{Cmd: RETURN}, err
 			}
 			return 1.0, thinker.CmdOut{Cmd: RETURN, Output: code}, nil
 		},

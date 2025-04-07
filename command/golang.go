@@ -27,7 +27,7 @@ func Golang(gopath string) thinker.Cmd {
 	return thinker.Cmd{
 		Cmd:    GOLANG,
 		Short:  "Use golang to execute scripts (package main) that help you complete your task. Enclose the golang code in <codeblock> tags.",
-		Syntax: `go  <codeblock>source code</codeblock>`,
+		Syntax: `go <codeblock>source code</codeblock>`,
 		Run:    golang(gopath),
 	}
 }

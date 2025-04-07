@@ -51,7 +51,9 @@ func TestRegistry(t *testing.T) {
 	})
 
 	t.Run("FMap", func(t *testing.T) {
-		conf, out, err := r.Decode(chatter.Reply{Text: "TOOL:return hello world\n"})
+		conf, out, err := r.Decode(
+			chatter.Reply{Text: "TOOL:return <codeblock>hello world</codeblock>\n"},
+		)
 
 		it.Then(t).Should(
 			it.Nil(err),

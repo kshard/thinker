@@ -27,7 +27,7 @@ func Python(dir string) thinker.Cmd {
 	return thinker.Cmd{
 		Cmd:    PYTHON,
 		Short:  "Use python to execute scripts that help you complete your task. Enclose the python code in <codeblock> tags.",
-		Syntax: `python  <codeblock>source code</codeblock>`,
+		Syntax: `python <codeblock>source code</codeblock>`,
 		Run:    python(dir),
 	}
 }
