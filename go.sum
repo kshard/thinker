@@ -6,7 +6,7 @@ github.com/fogfish/guid/v2 v2.1.0 h1:oEJHKM4yFOOCmKZdh0oH7eD3mL32n2+1YCc27lXB5rE
 github.com/fogfish/guid/v2 v2.1.0/go.mod h1:KkZ5T4EE3BqWQJFZBPLSHV/tBe23Xq4KvuPfwtNtepU=
 github.com/fogfish/it/v2 v2.2.1 h1:NuuaENAZka8XiJkEj2Q6THRsHSwleC/BLDux82NvkII=
 github.com/fogfish/it/v2 v2.2.1/go.mod h1:HHwufnTaZTvlRVnSesPl49HzzlMrQtweKbf+8Co/ll4=
-github.com/kshard/chatter v0.5.1 h1:hzKMIIOnqSWpGkDE3X45N/LlY1m3Q32Vyvyn0mSwivM=
-github.com/kshard/chatter v0.5.1/go.mod h1:Rg3cAzmXVoHGFKDJ8mbp8UUmYwHqOf5bkArIMX2irhE=
+github.com/kshard/chatter v0.6.0 h1:p2hD98TBzHgP1mJzW9lAcZxAhw+4Q2dh8beSeoXbNdM=
+github.com/kshard/chatter v0.6.0/go.mod h1:Rg3cAzmXVoHGFKDJ8mbp8UUmYwHqOf5bkArIMX2irhE=
 github.com/kshard/float8 v0.0.3 h1:wMmj/dbbwA8aKo+gZ8SS6MhjuXS9+yXYMlaJZfm77l0=
 github.com/kshard/float8 v0.0.3/go.mod h1:PnQWQ36EkMym5ulAnfCcpgOzbMeyyq90xsCcosTHJ5E=

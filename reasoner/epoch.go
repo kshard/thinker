@@ -26,9 +26,9 @@ func NewEpoch[B any](max int, reasoner thinker.Reasoner[B]) Epoch[B] {
 }
 
 // Deduct new goal for the agent to pursue.
-func (epoch Epoch[B]) Deduct(state thinker.State[B]) (thinker.Phase, chatter.Prompt, error) {
+func (epoch Epoch[B]) Deduct(state thinker.State[B]) (thinker.Phase, *chatter.Prompt, error) {
 	if state.Epoch >= epoch.max {
-		return thinker.AGENT_ABORT, chatter.Prompt{}, thinker.ErrMaxEpoch.With(thinker.ErrAborted, state.Epoch)
+		return thinker.AGENT_ABORT, nil, thinker.ErrMaxEpoch.With(thinker.ErrAborted, state.Epoch)
 	}
 
 	return epoch.Reasoner.Deduct(state)

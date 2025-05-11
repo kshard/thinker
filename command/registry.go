@@ -94,16 +94,18 @@ func (r *Registry) Harden(prompt *chatter.Prompt) {
 }
 
 // Transform LLM response into the command invokation, returns the result of command.
-func (r *Registry) Decode(reply chatter.Reply) (float64, thinker.CmdOut, error) {
-	s := string(reply.Text)
+func (r *Registry) Decode(reply *chatter.Reply) (float64, thinker.CmdOut, error) {
+	s := reply.String()
 	at := strings.Index(s, "TOOL:")
 	if at > -1 {
 		for name, cmd := range r.registry {
 			if strings.HasPrefix(s[at+5:], name) {
-				in := chatter.Reply{
-					Text:            s[5+len(name):],
-					UsedInputTokens: reply.UsedInputTokens,
-					UsedReplyTokens: reply.UsedReplyTokens,
+				in := &chatter.Reply{
+					Stage: chatter.LLM_RETURN,
+					Content: []chatter.Content{
+						chatter.ContentText{Text: s[5+len(name):]},
+					},
+					Usage: reply.Usage,
 				}
 				return cmd.Run(in)
 			}

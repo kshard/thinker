@@ -29,7 +29,7 @@ type Memory interface {
 	Commit(*Observation)
 
 	// Builds the context window for LLM using incoming prompt.
-	Context(chatter.Prompt) []fmt.Stringer
+	Context(*chatter.Prompt) []fmt.Stringer
 }
 
 // The observation made by agent, it contains LLMs prompt, reply, environment
@@ -42,7 +42,7 @@ type Observation struct {
 }
 
 // Create new observation
-func NewObservation(query chatter.Prompt, reply chatter.Reply) *Observation {
+func NewObservation(query *chatter.Prompt, reply *chatter.Reply) *Observation {
 	return &Observation{
 		Created: guid.G(guid.Clock),
 		Query:   Input{Content: query},
@@ -52,13 +52,13 @@ func NewObservation(query chatter.Prompt, reply chatter.Reply) *Observation {
 
 // Input and its relevance vector (embeddings) as observed by agent
 type Input struct {
-	Content   chatter.Prompt
+	Content   *chatter.Prompt
 	Relevance []float8.Float8
 }
 
 // Reply and its relevance vector (embeddings) as observed by agent
 type Reply struct {
-	Content    chatter.Reply
+	Content    *chatter.Reply
 	Relevance  []float8.Float8
 	Importance float64
 }

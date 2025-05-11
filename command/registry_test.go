@@ -51,9 +51,12 @@ func TestRegistry(t *testing.T) {
 	})
 
 	t.Run("FMap", func(t *testing.T) {
-		conf, out, err := r.Decode(
-			chatter.Reply{Text: "TOOL:return <codeblock>hello world</codeblock>\n"},
-		)
+		reply := &chatter.Reply{
+			Content: []chatter.Content{
+				chatter.ContentText{Text: "TOOL:return <codeblock>hello world</codeblock>\n"},
+			},
+		}
+		conf, out, err := r.Decode(reply)
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -64,7 +67,12 @@ func TestRegistry(t *testing.T) {
 	})
 
 	t.Run("FMapNoTool", func(t *testing.T) {
-		conf, _, err := r.Decode(chatter.Reply{Text: "TOOL:foo\n"})
+		reply := &chatter.Reply{
+			Content: []chatter.Content{
+				chatter.ContentText{Text: "TOOL:foo\n"},
+			},
+		}
+		conf, _, err := r.Decode(reply)
 
 		it.Then(t).ShouldNot(
 			it.Nil(err),

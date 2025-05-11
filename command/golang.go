@@ -98,13 +98,13 @@ func gofile(gopath, code string) (string, error) {
 	return filepath.Join(filepath.Base(dir), "main.go"), nil
 }
 
-func golang(gopath string) func(chatter.Reply) (float64, thinker.CmdOut, error) {
-	return func(command chatter.Reply) (float64, thinker.CmdOut, error) {
+func golang(gopath string) func(*chatter.Reply) (float64, thinker.CmdOut, error) {
+	return func(command *chatter.Reply) (float64, thinker.CmdOut, error) {
 		if err := goSetup(gopath); err != nil {
 			return 0.0, thinker.CmdOut{}, err
 		}
 
-		code, err := CodeBlock(GOLANG, command.Text)
+		code, err := CodeBlock(GOLANG, command.String())
 		if err != nil {
 			return 0.00, thinker.CmdOut{Cmd: GOLANG}, err
 		}

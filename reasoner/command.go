@@ -23,6 +23,8 @@ type StateCmd = thinker.State[thinker.CmdOut]
 // It returns right after the command return results.
 type Cmd struct{}
 
+var _ thinker.Reasoner[thinker.CmdOut] = (*Cmd)(nil)
+
 // Creates new command reasoner.
 func NewCmd() *Cmd {
 	return &Cmd{}
@@ -30,20 +32,20 @@ func NewCmd() *Cmd {
 
 func (task *Cmd) Purge() {}
 
-func (task *Cmd) Deduct(state StateCmd) (thinker.Phase, chatter.Prompt, error) {
+func (task *Cmd) Deduct(state StateCmd) (thinker.Phase, *chatter.Prompt, error) {
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
 		prompt.WithTask("Refine the previous operation using the feedback below.")
 		prompt.With(state.Feedback)
 
-		return thinker.AGENT_REFINE, prompt, nil
+		return thinker.AGENT_REFINE, &prompt, nil
 	}
 
 	if len(state.Reply.Cmd) != 0 {
-		return thinker.AGENT_RETURN, chatter.Prompt{}, nil
+		return thinker.AGENT_RETURN, nil, nil
 	}
 
-	return thinker.AGENT_ABORT, chatter.Prompt{}, thinker.ErrUnknown
+	return thinker.AGENT_ABORT, nil, thinker.ErrUnknown
 }
 
 //------------------------------------------------------------------------------
@@ -52,23 +54,25 @@ func (task *Cmd) Deduct(state StateCmd) (thinker.Phase, chatter.Prompt, error) {
 // The reason returns only after LLM uses return command.
 type CmdSeq struct{}
 
+var _ thinker.Reasoner[thinker.CmdOut] = (*CmdSeq)(nil)
+
 func NewCmdSeq() *CmdSeq {
 	return &CmdSeq{}
 }
 
 func (task *CmdSeq) Purge() {}
 
-func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, chatter.Prompt, error) {
+func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, *chatter.Prompt, error) {
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
 		prompt.WithTask("Refine the previous workflow step using the feedback below.")
 		prompt.With(state.Feedback)
 
-		return thinker.AGENT_REFINE, prompt, nil
+		return thinker.AGENT_REFINE, &prompt, nil
 	}
 
 	if state.Reply.Cmd == command.RETURN {
-		return thinker.AGENT_RETURN, chatter.Prompt{}, nil
+		return thinker.AGENT_RETURN, nil, nil
 	}
 
 	// the workflow step is completed
@@ -82,8 +86,8 @@ func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, chatter.Prompt, error
 			),
 		)
 
-		return thinker.AGENT_ASK, prompt, nil
+		return thinker.AGENT_ASK, &prompt, nil
 	}
 
-	return thinker.AGENT_ABORT, chatter.Prompt{}, thinker.ErrUnknown
+	return thinker.AGENT_ABORT, nil, thinker.ErrUnknown
 }

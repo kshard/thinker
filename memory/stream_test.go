@@ -23,7 +23,12 @@ func TestStream(t *testing.T) {
 		var prompt chatter.Prompt
 		prompt.WithTask("prompt.")
 
-		f := thinker.NewObservation(prompt, chatter.Reply{Text: "reply."})
+		reply := &chatter.Reply{
+			Content: []chatter.Content{
+				chatter.ContentText{Text: "reply."},
+			},
+		}
+		f := thinker.NewObservation(&prompt, reply)
 		s.Commit(f)
 
 		it.Then(t).Should(
@@ -37,7 +42,7 @@ func TestStream(t *testing.T) {
 		prompt.WithTask("ask.")
 
 		seq := make([]string, 0)
-		for _, x := range s.Context(prompt) {
+		for _, x := range s.Context(&prompt) {
 			seq = append(seq, x.String())
 		}
 
@@ -47,17 +52,26 @@ func TestStream(t *testing.T) {
 	})
 
 	t.Run("Evict", func(t *testing.T) {
-		a := thinker.NewObservation(chatter.Prompt{Task: "0."}, chatter.Reply{Text: "0."})
+		a := thinker.NewObservation(
+			&chatter.Prompt{Task: "0."},
+			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "0."}}},
+		)
 		s.Commit(a)
 
-		b := thinker.NewObservation(chatter.Prompt{Task: "a."}, chatter.Reply{Text: "a."})
+		b := thinker.NewObservation(
+			&chatter.Prompt{Task: "a."},
+			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "a."}}},
+		)
 		s.Commit(b)
 
-		c := thinker.NewObservation(chatter.Prompt{Task: "b."}, chatter.Reply{Text: "b."})
+		c := thinker.NewObservation(
+			&chatter.Prompt{Task: "b."},
+			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "b."}}},
+		)
 		s.Commit(c)
 
 		seq := make([]string, 0)
-		for _, x := range s.Context(chatter.Prompt{Task: "c."}) {
+		for _, x := range s.Context(&chatter.Prompt{Task: "c."}) {
 			seq = append(seq, x.String())
 		}
 
@@ -67,14 +81,20 @@ func TestStream(t *testing.T) {
 	})
 
 	t.Run("Purge", func(t *testing.T) {
-		a := thinker.NewObservation(chatter.Prompt{Task: "a."}, chatter.Reply{Text: "a."})
+		a := thinker.NewObservation(
+			&chatter.Prompt{Task: "a."},
+			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "a."}}},
+		)
 		s.Commit(a)
 
-		b := thinker.NewObservation(chatter.Prompt{Task: "b."}, chatter.Reply{Text: "b."})
+		b := thinker.NewObservation(
+			&chatter.Prompt{Task: "b."},
+			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "b."}}},
+		)
 		s.Commit(b)
 
 		seq := make([]string, 0)
-		for _, x := range s.Context(chatter.Prompt{Task: "c."}) {
+		for _, x := range s.Context(&chatter.Prompt{Task: "c."}) {
 			seq = append(seq, x.String())
 		}
 
@@ -85,7 +105,7 @@ func TestStream(t *testing.T) {
 		s.Purge()
 
 		seq = make([]string, 0)
-		for _, x := range s.Context(chatter.Prompt{Task: "c."}) {
+		for _, x := range s.Context(&chatter.Prompt{Task: "c."}) {
 			seq = append(seq, x.String())
 		}
 		it.Then(t).Should(

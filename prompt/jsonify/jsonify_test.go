@@ -32,7 +32,12 @@ func TestStrings(t *testing.T) {
 
 	t.Run("Decode", func(t *testing.T) {
 		var seq []string
-		err := jsonify.Strings.Decode(chatter.Reply{Text: ` ["a", "b", "c"] `}, &seq)
+		reply := &chatter.Reply{
+			Content: []chatter.Content{
+				chatter.ContentText{Text: ` ["a", "b", "c"] `},
+			},
+		}
+		err := jsonify.Strings.Decode(reply, &seq)
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -46,7 +51,12 @@ func TestStrings(t *testing.T) {
 			"[a, b, c]": "JSON parsing of included list of strings has failed",
 		} {
 			var seq []string
-			err := jsonify.Strings.Decode(chatter.Reply{Text: in}, &seq)
+			reply := &chatter.Reply{
+				Content: []chatter.Content{
+					chatter.ContentText{Text: in},
+				},
+			}
+			err := jsonify.Strings.Decode(reply, &seq)
 
 			it.Then(t).Should(
 				it.String(err.Error()).Contain(ex),
