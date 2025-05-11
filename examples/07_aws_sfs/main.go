@@ -10,6 +10,7 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsbedrock"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
 	"github.com/aws/jsii-runtime-go"
@@ -23,7 +24,9 @@ func main() {
 	app := awscdk.NewApp(nil)
 	stack := awscdk.NewStack(app, jsii.String("example-aws-thinker"), nil)
 
-	llm := bedrock.NewMetaLlama31B70V1(stack)
+	llm := bedrock.NewFoundationModel(stack, jsii.String("LLM"),
+		awsbedrock.FoundationModelIdentifier_META_LLAMA_3_1_70_INSTRUCT_V1(),
+	)
 
 	input := awsevents.NewEventBus(stack, jsii.String("Input"),
 		&awsevents.EventBusProps{

@@ -20,19 +20,17 @@ import (
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
-	"github.com/kshard/thinker/prompt/jsonify"
 )
 
 // Ask LLMs about colors of rainbow
-func encode(any) (prompt chatter.Prompt, err error) {
+func encode(any) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask("Return colors of the rainbow.")
 
 	prompt.With(
 		chatter.Guide("Use the context and conversation history to find the right answer."),
 	)
 
-	// Injects requirments for LLM to return json array of strings
-	jsonify.Strings.Harden(&prompt)
 	return
 }
 

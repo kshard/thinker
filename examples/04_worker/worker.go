@@ -21,7 +21,8 @@ import (
 	"github.com/kshard/thinker/command"
 )
 
-func encode(q string) (prompt chatter.Prompt, err error) {
+func encode(q string) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask(`
 		Use available tools to complete the workflow:
 		(1) Create 5 files one by one with few lines of random text, at least one line shall contain "%s".

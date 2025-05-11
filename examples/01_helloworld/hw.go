@@ -19,7 +19,8 @@ import (
 
 // This function is core in the example. It takes input (the sentence)
 // and generate prompt function that guides LLMs on how to create anagram.
-func anagram(expr string) (prompt chatter.Prompt, err error) {
+func anagram(expr string) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.
 		WithTask("Create anagram using the phrase: %s", expr).
 		With(

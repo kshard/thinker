@@ -37,7 +37,8 @@ func (lib *Ingestor) Ingest(doc Document) (Abstract, error) {
 	return lib.Prompt(context.Background(), doc)
 }
 
-func (lib *Ingestor) encode(doc Document) (prompt chatter.Prompt, err error) {
+func (lib *Ingestor) encode(doc Document) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask(`
 		You are an expert summarizer. Given the following document, read it carefully
 		and understand its context, key messages, and tone. Then, generate a concise
@@ -54,8 +55,8 @@ func (lib *Ingestor) encode(doc Document) (prompt chatter.Prompt, err error) {
 	return
 }
 
-func (lib *Ingestor) decode(reply chatter.Reply) (float64, Abstract, error) {
-	return 1.0, Abstract{Text: reply.Text}, nil
+func (lib *Ingestor) decode(reply *chatter.Reply) (float64, Abstract, error) {
+	return 1.0, Abstract{Text: reply.String()}, nil
 }
 
 //------------------------------------------------------------------------------
@@ -81,7 +82,8 @@ func (lib *Classifier) Classify(doc Abstract) (Keywords, error) {
 	return lib.Prompt(context.Background(), doc)
 }
 
-func (lib *Classifier) encode(doc Abstract) (prompt chatter.Prompt, err error) {
+func (lib *Classifier) encode(doc Abstract) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask(`
 		You are an expert in text analysis. Given the following abstractive summary,
 		analyze its content and identify the most relevant keywords that represent
@@ -98,8 +100,8 @@ func (lib *Classifier) encode(doc Abstract) (prompt chatter.Prompt, err error) {
 	return
 }
 
-func (lib *Classifier) decode(reply chatter.Reply) (float64, Keywords, error) {
-	return 1.0, Keywords{Keywords: reply.Text, Text: lib.text}, nil
+func (lib *Classifier) decode(reply *chatter.Reply) (float64, Keywords, error) {
+	return 1.0, Keywords{Keywords: reply.String(), Text: lib.text}, nil
 }
 
 //------------------------------------------------------------------------------
@@ -126,7 +128,8 @@ func (lib *Insighter) Insight(doc Keywords) (Insight, error) {
 	return lib.Prompt(context.Background(), doc)
 }
 
-func (lib *Insighter) encode(doc Keywords) (prompt chatter.Prompt, err error) {
+func (lib *Insighter) encode(doc Keywords) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask(`
 		You receive a stream of abstractive summaries and their corresponding keyword
 		lists over time. Your task is to store, track, and analyze this evolving
@@ -155,6 +158,6 @@ func (lib *Insighter) encode(doc Keywords) (prompt chatter.Prompt, err error) {
 	return
 }
 
-func (lib *Insighter) decode(reply chatter.Reply) (float64, Insight, error) {
-	return 1.0, Insight{Concern: reply.Text}, nil
+func (lib *Insighter) decode(reply *chatter.Reply) (float64, Insight, error) {
+	return 1.0, Insight{Concern: reply.String()}, nil
 }
