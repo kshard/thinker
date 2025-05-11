@@ -17,7 +17,12 @@ import (
 
 func TestBash(t *testing.T) {
 	cmd := Bash("", "/tmp")
-	conf, out, err := cmd.Run(chatter.Reply{Text: "<codeblock>ls</codeblock>"})
+	reply := &chatter.Reply{
+		Content: []chatter.Content{
+			chatter.ContentText{Text: `<codeblock>ls</codeblock>`},
+		},
+	}
+	conf, out, err := cmd.Run(reply)
 
 	it.Then(t).Should(
 		it.Nil(err),

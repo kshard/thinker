@@ -38,8 +38,8 @@ func (strings) Harden(prompt *chatter.Prompt) {
 
 // Parse LLMs response, searching for json array of strings.
 // It returns the feedback to LLM if response does not contain valid json.
-func (strings) Decode(reply chatter.Reply, seq any) error {
-	matches := re.FindStringSubmatch(string(reply.Text))
+func (strings) Decode(reply *chatter.Reply, seq any) error {
+	matches := re.FindStringSubmatch(string(reply.String()))
 	if len(matches) == 0 {
 		return thinker.Feedback(
 			`Improve the response based on feedback:`,

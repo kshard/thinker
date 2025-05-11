@@ -61,10 +61,10 @@ func NewWorker[A any](
 	return w
 }
 
-func (w *Worker[A]) encode(in A) (prompt chatter.Prompt, err error) {
+func (w *Worker[A]) encode(in A) (prompt *chatter.Prompt, err error) {
 	prompt, err = w.encoder.Encode(in)
 	if err == nil {
-		w.registry.Harden(&prompt)
+		w.registry.Harden(prompt)
 	}
 
 	return

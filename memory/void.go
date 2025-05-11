@@ -20,6 +20,8 @@ type Void struct {
 	stratum chatter.Stratum
 }
 
+var _ thinker.Memory = (*Void)(nil)
+
 // Create the void memory that does not retain any observations.
 func NewVoid(stratum chatter.Stratum) *Void {
 	return &Void{stratum: stratum}
@@ -32,7 +34,7 @@ func (s *Void) Purge() {}
 func (s *Void) Commit(e *thinker.Observation) {}
 
 // Builds the context window for LLM using incoming prompt.
-func (s *Void) Context(prompt chatter.Prompt) []fmt.Stringer {
+func (s *Void) Context(prompt *chatter.Prompt) []fmt.Stringer {
 	if len(s.stratum) == 0 {
 		return prompt.ToSeq()
 	}

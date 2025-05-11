@@ -92,13 +92,13 @@ func pyfile(dir, code string) (string, error) {
 	return fd.Name(), nil
 }
 
-func python(dir string) func(chatter.Reply) (float64, thinker.CmdOut, error) {
-	return func(command chatter.Reply) (float64, thinker.CmdOut, error) {
+func python(dir string) func(*chatter.Reply) (float64, thinker.CmdOut, error) {
+	return func(command *chatter.Reply) (float64, thinker.CmdOut, error) {
 		if err := pySetup(dir); err != nil {
 			return 0.0, thinker.CmdOut{}, err
 		}
 
-		code, err := CodeBlock(PYTHON, command.Text)
+		code, err := CodeBlock(PYTHON, command.String())
 		if err != nil {
 			return 0.00, thinker.CmdOut{Cmd: PYTHON}, err
 		}

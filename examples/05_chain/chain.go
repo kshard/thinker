@@ -33,7 +33,8 @@ func NewAgentA(llm chatter.Chatter) *AgentA {
 	return agt
 }
 
-func (AgentA) story(subj string) (prompt chatter.Prompt, err error) {
+func (AgentA) story(subj string) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask("Create a short story about 140 characters about %s.", subj)
 	return
 }
@@ -55,7 +56,8 @@ func NewAgentB(llm chatter.Chatter) *AgentB {
 	return agt
 }
 
-func (agt AgentB) Encode(string) (prompt chatter.Prompt, err error) {
+func (agt AgentB) Encode(string) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask(`
 		Use available tools to complete the workflow:
 		(1) Use available tools to read files one by one.

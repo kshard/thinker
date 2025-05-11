@@ -17,7 +17,9 @@ import (
 
 func TestGolang(t *testing.T) {
 	cmd := Golang("/tmp")
-	conf, out, err := cmd.Run(chatter.Reply{Text: `<codeblock>
+	reply := &chatter.Reply{
+		Content: []chatter.Content{
+			chatter.ContentText{Text: `<codeblock>
 package main
 
 import "fmt"
@@ -26,7 +28,10 @@ func main() {
 	fmt.Println("response")
 }
 </codeblock>
-`})
+`},
+		},
+	}
+	conf, out, err := cmd.Run(reply)
 
 	it.Then(t).Should(
 		it.Nil(err),

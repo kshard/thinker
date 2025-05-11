@@ -12,7 +12,8 @@ import "github.com/kshard/chatter"
 
 // Identity encoder, passes input string directly to prompt
 var EncoderID = FromEncoder(
-	func(q string) (prompt chatter.Prompt, err error) {
+	func(q string) (prompt *chatter.Prompt, err error) {
+		prompt = &chatter.Prompt{}
 		prompt.WithTask(q)
 		return
 	},
@@ -20,7 +21,7 @@ var EncoderID = FromEncoder(
 
 // Identity decoder, passes LLM reply directly as result
 var DecoderID = FromDecoder(
-	func(reply chatter.Reply) (float64, string, error) {
-		return 1.0, reply.Text, nil
+	func(reply *chatter.Reply) (float64, string, error) {
+		return 1.0, reply.String(), nil
 	},
 )

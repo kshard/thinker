@@ -28,6 +28,8 @@ type Stream struct {
 	cap     int
 }
 
+var _ thinker.Memory = (*Stream)(nil)
+
 // Creates new stream memory that retains all of the agent's observations.
 func NewStream(cap int, stratum chatter.Stratum) *Stream {
 	return &Stream{
@@ -62,7 +64,7 @@ func (s *Stream) Commit(e *thinker.Observation) {
 }
 
 // Builds the context window for LLM using incoming prompt.
-func (s *Stream) Context(prompt chatter.Prompt) []fmt.Stringer {
+func (s *Stream) Context(prompt *chatter.Prompt) []fmt.Stringer {
 	seq := make([]fmt.Stringer, 0)
 	if len(s.stratum) > 0 {
 		seq = append(seq, s.stratum)

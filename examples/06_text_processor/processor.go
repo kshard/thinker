@@ -21,7 +21,8 @@ import (
 	"github.com/kshard/thinker/command"
 )
 
-func bootstrap(n int) (prompt chatter.Prompt, err error) {
+func bootstrap(n int) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask(`
 		Use available tools to create %d files one by one with three or four lines of random
 		but meanigful text. Each file must contain unique content.`, n)
@@ -29,7 +30,8 @@ func bootstrap(n int) (prompt chatter.Prompt, err error) {
 	return
 }
 
-func processor(s string) (prompt chatter.Prompt, err error) {
+func processor(s string) (prompt *chatter.Prompt, err error) {
+	prompt = new(chatter.Prompt)
 	prompt.WithTask(`Analyze document and extract keywords.`)
 
 	prompt.With(

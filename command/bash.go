@@ -30,9 +30,9 @@ func Bash(os, dir string) thinker.Cmd {
 	}
 }
 
-func bash(os string, dir string) func(chatter.Reply) (float64, thinker.CmdOut, error) {
-	return func(command chatter.Reply) (float64, thinker.CmdOut, error) {
-		code, err := CodeBlock(BASH, command.Text)
+func bash(os string, dir string) func(*chatter.Reply) (float64, thinker.CmdOut, error) {
+	return func(command *chatter.Reply) (float64, thinker.CmdOut, error) {
+		code, err := CodeBlock(BASH, command.String())
 		if err != nil {
 			return 0.00, thinker.CmdOut{Cmd: BASH}, err
 		}

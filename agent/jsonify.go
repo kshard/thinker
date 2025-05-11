@@ -57,16 +57,16 @@ func NewJsonify[A any](
 	return w
 }
 
-func (w *Jsonify[A]) encode(in A) (prompt chatter.Prompt, err error) {
+func (w *Jsonify[A]) encode(in A) (prompt *chatter.Prompt, err error) {
 	prompt, err = w.encoder.Encode(in)
 	if err == nil {
-		jsonify.Strings.Harden(&prompt)
+		jsonify.Strings.Harden(prompt)
 	}
 
 	return
 }
 
-func (w *Jsonify[A]) decode(reply chatter.Reply) (float64, []string, error) {
+func (w *Jsonify[A]) decode(reply *chatter.Reply) (float64, []string, error) {
 	var seq []string
 	if err := jsonify.Strings.Decode(reply, &seq); err != nil {
 		return 0.0, nil, err
@@ -79,15 +79,15 @@ func (w *Jsonify[A]) decode(reply chatter.Reply) (float64, []string, error) {
 	return 1.0, seq, nil
 }
 
-func (w *Jsonify[A]) deduct(state thinker.State[[]string]) (thinker.Phase, chatter.Prompt, error) {
+func (w *Jsonify[A]) deduct(state thinker.State[[]string]) (thinker.Phase, *chatter.Prompt, error) {
 	// Provide feedback to LLM if there are no confidence about the results
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
 		prompt.WithTask("Refine the previous request using the feedback below.")
 		prompt.With(state.Feedback)
-		return thinker.AGENT_REFINE, prompt, nil
+		return thinker.AGENT_REFINE, &prompt, nil
 	}
 
 	// We have sufficient confidence, return results
-	return thinker.AGENT_RETURN, chatter.Prompt{}, nil
+	return thinker.AGENT_RETURN, nil, nil
 }

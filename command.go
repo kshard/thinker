@@ -34,7 +34,7 @@ type Cmd struct {
 
 	// The actual command execution function, which can be defined statically or
 	// dynamically upon registration.
-	Run func(chatter.Reply) (float64, CmdOut, error)
+	Run func(*chatter.Reply) (float64, CmdOut, error)
 }
 
 func (cmd Cmd) IsValid() bool {

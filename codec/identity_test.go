@@ -28,7 +28,8 @@ func TestEncoderID(t *testing.T) {
 
 func TestDecoderID(t *testing.T) {
 	input := "prompt"
-	conf, text, err := codec.DecoderID.Decode(chatter.Reply{Text: input})
+	reply := &chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: input}}}
+	conf, text, err := codec.DecoderID.Decode(reply)
 
 	it.Then(t).Should(
 		it.Nil(err),

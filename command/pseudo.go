@@ -13,7 +13,6 @@ import (
 	"github.com/kshard/thinker"
 )
 
-
 // A unique name for return command
 const RETURN = "return"
 
@@ -23,8 +22,8 @@ func Return() thinker.Cmd {
 		Cmd:    RETURN,
 		Short:  "indicate that workflow is completed, the agent return expected results",
 		Syntax: "return <codeblock>value to return</codeblock>",
-		Run: func(t chatter.Reply) (float64, thinker.CmdOut, error) {
-			code, err := CodeBlock(RETURN, t.Text)
+		Run: func(t *chatter.Reply) (float64, thinker.CmdOut, error) {
+			code, err := CodeBlock(RETURN, t.String())
 			if err != nil {
 				return 0.00, thinker.CmdOut{Cmd: RETURN}, err
 			}

@@ -17,12 +17,17 @@ import (
 
 func TestPython(t *testing.T) {
 	cmd := Python("/tmp")
-	conf, out, err := cmd.Run(chatter.Reply{Text: `<codeblock>
+	reply := &chatter.Reply{
+		Content: []chatter.Content{
+			chatter.ContentText{Text: `<codeblock>
 import requests
 response = requests.get('https://example.com/')
 print(response)
 </codeblock>
-`})
+`},
+		},
+	}
+	conf, out, err := cmd.Run(reply)
 
 	it.Then(t).Should(
 		it.Nil(err),
