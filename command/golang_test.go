@@ -16,7 +16,7 @@ import (
 )
 
 func TestGolang(t *testing.T) {
-	cmd := Golang("/tmp")
+	cmd := Golang("/tmp/cmd")
 	script := `
 package main
 

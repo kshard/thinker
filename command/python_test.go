@@ -16,7 +16,7 @@ import (
 )
 
 func TestPython(t *testing.T) {
-	cmd := Python("/tmp")
+	cmd := Python("/tmp/cmd")
 	script := `
 import requests
 response = requests.get('https://example.com/')

@@ -16,7 +16,7 @@ import (
 )
 
 func TestGolang(t *testing.T) {
-	cmd := Golang("/tmp")
+	cmd := Golang("/tmp/softcmd")
 	reply := &chatter.Reply{
 		Content: []chatter.Content{
 			chatter.Text(`<codeblock>

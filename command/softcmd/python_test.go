@@ -16,7 +16,7 @@ import (
 )
 
 func TestPython(t *testing.T) {
-	cmd := Python("/tmp")
+	cmd := Python("/tmp/softcmd")
 	reply := &chatter.Reply{
 		Content: []chatter.Content{
 			chatter.Text(`<codeblock>

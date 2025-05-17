@@ -16,7 +16,7 @@ import (
 )
 
 func TestBash(t *testing.T) {
-	cmd := Bash("", "/tmp")
+	cmd := Bash("", "/tmp/cmd")
 	reply := json.RawMessage(`{"script": "ls"}`)
 	out, err := cmd.Run(reply)
 

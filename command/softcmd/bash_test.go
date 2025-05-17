@@ -16,7 +16,7 @@ import (
 )
 
 func TestBash(t *testing.T) {
-	cmd := Bash("", "/tmp")
+	cmd := Bash("", "/tmp/softcmd")
 	reply := &chatter.Reply{
 		Content: []chatter.Content{
 			chatter.Text(`<codeblock>ls</codeblock>`),
