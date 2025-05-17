@@ -19,7 +19,7 @@ func TestBash(t *testing.T) {
 	cmd := Bash("", "/tmp/softcmd")
 	reply := &chatter.Reply{
 		Content: []chatter.Content{
-			chatter.Text(`<codeblock>ls</codeblock>`),
+			chatter.Text(`<codeblock>echo "xxx"</codeblock>`),
 		},
 	}
 	conf, out, err := cmd.Run(reply)
