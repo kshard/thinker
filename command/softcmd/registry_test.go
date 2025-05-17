@@ -6,7 +6,7 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
 	"testing"
@@ -45,7 +45,7 @@ func TestRegistry(t *testing.T) {
 
 		it.Then(t).Should(
 			it.String(str).Contain("TOOL:"+cmd.Cmd),
-			it.String(str).Contain(cmd.Short),
+			it.String(str).Contain(cmd.About),
 			it.String(str).Contain(cmd.Syntax),
 		)
 	})
@@ -53,7 +53,7 @@ func TestRegistry(t *testing.T) {
 	t.Run("FMap", func(t *testing.T) {
 		reply := &chatter.Reply{
 			Content: []chatter.Content{
-				chatter.ContentText{Text: "TOOL:return <codeblock>hello world</codeblock>\n"},
+				chatter.Text("TOOL:return <codeblock>hello world</codeblock>\n"),
 			},
 		}
 		conf, out, err := r.Decode(reply)
@@ -69,7 +69,7 @@ func TestRegistry(t *testing.T) {
 	t.Run("FMapNoTool", func(t *testing.T) {
 		reply := &chatter.Reply{
 			Content: []chatter.Content{
-				chatter.ContentText{Text: "TOOL:foo\n"},
+				chatter.Text("TOOL:foo\n"),
 			},
 		}
 		conf, _, err := r.Decode(reply)

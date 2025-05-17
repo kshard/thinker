@@ -17,28 +17,26 @@ import (
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/llm/autoconfig"
 	"github.com/kshard/thinker/agent"
+	"github.com/kshard/thinker/agent/worker"
 	"github.com/kshard/thinker/codec"
-	"github.com/kshard/thinker/command"
+	"github.com/kshard/thinker/command/softcmd"
 )
 
-func bootstrap(n int) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func bootstrap(n int) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`
 		Use available tools to create %d files one by one with three or four lines of random
 		but meanigful text. Each file must contain unique content.`, n)
 
-	return
+	return &prompt, nil
 }
 
-func processor(s string) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func processor(s string) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`Analyze document and extract keywords.`)
+	prompt.WithBlob("Document", s)
 
-	prompt.With(
-		chatter.Blob("Document", s),
-	)
-
-	return
+	return &prompt, nil
 }
 
 func main() {
@@ -61,9 +59,9 @@ func main() {
 
 	// We need 10 files, let's use agents to get itls
 	fmt.Printf("==> creating files ...\n")
-	registry := command.NewRegistry()
-	registry.Register(command.Bash("MacOS", "/tmp/script/txt"))
-	init := agent.NewWorker(llm, 4, codec.FromEncoder(bootstrap), registry)
+	registry := softcmd.NewRegistry()
+	registry.Register(softcmd.Bash("MacOS", "/tmp/script/txt"))
+	init := worker.NewReflex(llm, 4, codec.FromEncoder(bootstrap), registry)
 	if _, err = init.Prompt(context.Background(), 13); err != nil {
 		panic(err)
 	}
@@ -79,7 +77,7 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			return []byte(kwd), nil
+			return []byte(kwd.String()), nil
 		},
 	)
 }

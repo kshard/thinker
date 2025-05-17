@@ -37,8 +37,8 @@ func (lib *Ingestor) Ingest(doc Document) (Abstract, error) {
 	return lib.Prompt(context.Background(), doc)
 }
 
-func (lib *Ingestor) encode(doc Document) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func (lib *Ingestor) encode(doc Document) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`
 		You are an expert summarizer. Given the following document, read it carefully
 		and understand its context, key messages, and tone. Then, generate a concise
@@ -48,11 +48,9 @@ func (lib *Ingestor) encode(doc Document) (prompt *chatter.Prompt, err error) {
 		the original.
 	`)
 
-	prompt.With(
-		chatter.Input("DOCUMENT:", doc.Text),
-	)
+	prompt.WithInput("DOCUMENT:", doc.Text)
 
-	return
+	return &prompt, nil
 }
 
 func (lib *Ingestor) decode(reply *chatter.Reply) (float64, Abstract, error) {
@@ -82,8 +80,8 @@ func (lib *Classifier) Classify(doc Abstract) (Keywords, error) {
 	return lib.Prompt(context.Background(), doc)
 }
 
-func (lib *Classifier) encode(doc Abstract) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func (lib *Classifier) encode(doc Abstract) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`
 		You are an expert in text analysis. Given the following abstractive summary,
 		analyze its content and identify the most relevant keywords that represent
@@ -93,11 +91,9 @@ func (lib *Classifier) encode(doc Abstract) (prompt *chatter.Prompt, err error) 
 		the subject matter.
 	`)
 
-	prompt.With(
-		chatter.Input("DOCUMENT:", doc.Text),
-	)
+	prompt.WithInput("DOCUMENT:", doc.Text)
 
-	return
+	return &prompt, nil
 }
 
 func (lib *Classifier) decode(reply *chatter.Reply) (float64, Keywords, error) {
@@ -128,34 +124,28 @@ func (lib *Insighter) Insight(doc Keywords) (Insight, error) {
 	return lib.Prompt(context.Background(), doc)
 }
 
-func (lib *Insighter) encode(doc Keywords) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func (lib *Insighter) encode(doc Keywords) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`
 		You receive a stream of abstractive summaries and their corresponding keyword
 		lists over time. Your task is to store, track, and analyze this evolving
 		information to answer high-level questions about the documents.
 	`)
 
-	prompt.With(
-		chatter.Guide(`
+	prompt.WithGuide(`
 			Based on the full memory of all previously seen summaries and keywords,
 			provide thoughtful, concise answers to the following:`,
-			`(1) What is the general concern or overarching theme reflected in these
+		`(1) What is the general concern or overarching theme reflected in these
 			summaries so far?`,
-			`(2) What keywords or topics are trending across documents (i.e., appearing
+		`(2) What keywords or topics are trending across documents (i.e., appearing
 			frequently or growing in relevance)?`,
-		),
 	)
 
-	prompt.With(
-		chatter.Blob("KEYWORDS:", doc.Keywords),
-	)
+	prompt.WithBlob("KEYWORDS:", doc.Keywords)
 
-	prompt.With(
-		chatter.Blob("DOCUMENT:", doc.Text),
-	)
+	prompt.WithBlob("DOCUMENT:", doc.Text)
 
-	return
+	return &prompt, nil
 }
 
 func (lib *Insighter) decode(reply *chatter.Reply) (float64, Insight, error) {

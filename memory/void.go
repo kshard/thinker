@@ -9,8 +9,6 @@
 package memory
 
 import (
-	"fmt"
-
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
 )
@@ -34,10 +32,10 @@ func (s *Void) Purge() {}
 func (s *Void) Commit(e *thinker.Observation) {}
 
 // Builds the context window for LLM using incoming prompt.
-func (s *Void) Context(prompt *chatter.Prompt) []fmt.Stringer {
+func (s *Void) Context(prompt chatter.Message) []chatter.Message {
 	if len(s.stratum) == 0 {
-		return prompt.ToSeq()
+		return []chatter.Message{prompt}
 	}
 
-	return []fmt.Stringer{s.stratum, prompt}
+	return []chatter.Message{s.stratum, prompt}
 }

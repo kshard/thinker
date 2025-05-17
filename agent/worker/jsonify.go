@@ -6,11 +6,12 @@
 // https://github.com/kshard/thinker
 //
 
-package agent
+package worker
 
 import (
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
+	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/memory"
 	"github.com/kshard/thinker/prompt/jsonify"
@@ -19,7 +20,7 @@ import (
 
 // Jsonify implementing request/response to LLMs, forcing the response to be JSON array.
 type Jsonify[A any] struct {
-	*Automata[A, []string]
+	*agent.Automata[A, []string]
 	encoder   thinker.Encoder[A]
 	validator func([]string) error
 }
@@ -31,7 +32,7 @@ func NewJsonify[A any](
 	validator func([]string) error,
 ) *Jsonify[A] {
 	w := &Jsonify[A]{encoder: encoder, validator: validator}
-	w.Automata = NewAutomata(llm,
+	w.Automata = agent.NewAutomata(llm,
 
 		// Configures memory for the agent. Typically, memory retains all of
 		// the agent's observations. Here, we use an infinite stream memory,
@@ -57,13 +58,18 @@ func NewJsonify[A any](
 	return w
 }
 
-func (w *Jsonify[A]) encode(in A) (prompt *chatter.Prompt, err error) {
-	prompt, err = w.encoder.Encode(in)
-	if err == nil {
-		jsonify.Strings.Harden(prompt)
+func (w *Jsonify[A]) encode(in A) (chatter.Message, error) {
+	prompt, err := w.encoder.Encode(in)
+	if err != nil {
+		return nil, err
 	}
 
-	return
+	switch v := prompt.(type) {
+	case *chatter.Prompt:
+		jsonify.Strings.Harden(v)
+	}
+
+	return prompt, nil
 }
 
 func (w *Jsonify[A]) decode(reply *chatter.Reply) (float64, []string, error) {
@@ -79,7 +85,7 @@ func (w *Jsonify[A]) decode(reply *chatter.Reply) (float64, []string, error) {
 	return 1.0, seq, nil
 }
 
-func (w *Jsonify[A]) deduct(state thinker.State[[]string]) (thinker.Phase, *chatter.Prompt, error) {
+func (w *Jsonify[A]) deduct(state thinker.State[[]string]) (thinker.Phase, chatter.Message, error) {
 	// Provide feedback to LLM if there are no confidence about the results
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt

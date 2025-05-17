@@ -6,7 +6,7 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestBash(t *testing.T) {
 	cmd := Bash("", "/tmp")
 	reply := &chatter.Reply{
 		Content: []chatter.Content{
-			chatter.ContentText{Text: `<codeblock>ls</codeblock>`},
+			chatter.Text(`<codeblock>ls</codeblock>`),
 		},
 	}
 	conf, out, err := cmd.Run(reply)

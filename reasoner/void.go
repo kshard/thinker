@@ -22,6 +22,6 @@ func NewVoid[B any]() *Void[B] { return &Void[B]{} }
 func (Void[B]) Purge() {}
 
 // Deduct new goal for the agent to pursue.
-func (Void[B]) Deduct(thinker.State[B]) (thinker.Phase, *chatter.Prompt, error) {
+func (Void[B]) Deduct(thinker.State[B]) (thinker.Phase, chatter.Message, error) {
 	return thinker.AGENT_RETURN, nil, nil
 }

@@ -44,10 +44,23 @@ The generative agents autonomously generate output as a reaction on input, past 
 
 In this library, an agent is defined as a side-effect function `ƒ: A ⟼ B`, which takes a Golang type `A` as input and autonomously produces an output `B`, while retaining memory of past experiences.
 
+## Design Philosophy
+
+1. **Minimal**: No hidden magic; each component is explicit.
+2. **Typed**: Inputs and outputs are type-safe (A, B).
+3. **Composable**: Agents can be used standalone, orchestrated by higher layers or piped.
+4. **Interoperable**: Supports integration with LLMs (e.g. Bedrock, OpenAI) and tools.
+
+## Getting started
+
 - [Inspiration](#inspiration)
+- [Design Philosophy](#design-philosophy)
 - [Getting started](#getting-started)
 - [Quick example](#quick-example)
 - [Agent Architecture](#agent-architecture)
+  - [Prompter](#prompter)
+  - [Manifold](#manifold)
+  - [Automata](#automata)
   - [Memory](#memory)
   - [Reasoner](#reasoner)
   - [Encoder \& Decoder](#encoder--decoder)
@@ -59,9 +72,6 @@ In this library, an agent is defined as a side-effect function `ƒ: A ⟼ B`, wh
   - [commit message](#commit-message)
   - [bugs](#bugs)
 - [License](#license)
-
-
-## Getting started
 
 The latest version of the library is available at `main` branch of this repository. All development, including new features and bug fixes, take place on the `main` branch using forking and pull requests as described in contribution guidelines. The stable version is available via Golang modules.
 
@@ -128,7 +138,68 @@ func main() {
 
 ## Agent Architecture
 
-The `thinker` library provides toolkit for running agents with type-safe constraints. It is built on a pluggable architecture, allowing applications to define custom workflows. The diagram below emphasis core building blocks.
+The `thinker` framework defines a composable, layered architecture for building AI agents, from simple prompt wrappers to full autonomous systems. Each layer adds capability while preserving modularity and type safety. It's **core abstractions** are:
+* **Prompter** Stateless prompt-response unit. Encodes input of type `A`, returns a `chatter.Reply`. No memory or reasoning. Ideal for direct LLM calls or prompt engineering wrappers.
+* **Manifold** Single-session agent. Handles structured interactions with optional tool use and ephemeral memory. Encodes `A`, returns structured output `B`. Delegates reasoning to the LLM. Therefore requires sophisticated LLM for reliable operations. (for example [AWS Bedrock models](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html), watch out for Tool use)
+* **Automata** Full agent runtime. Orchestrates long-term multi-step interactions composable with `Prompter` and `Manifold` as subroutines. Supports planning, tool invocation, durable memory, and reflective reasoning. Encodes `A`, returns `B`.
+
+This architecture allows you to start simple (one-shot prompts) and scale up to powerful autonomous systems with reasoning and memory - all within a consistent agent model.
+
+
+| Abstraction | Input Type | Output Type | Tool Use | Memory Scope           | Reasoning                 | Composable           | Purpose                                         |
+| ----------- | ---------- | ----------- | -------- | ---------------------- | ------------------------- | -------------------- | ----------------------------------------------- |
+| `Prompter`  | `A`        | `Reply`     | ❌        | ❌ stateless            | ❌                         | ✅ pipe               | Simple LLM prompt-response, no side effects     |
+| `Manifold`  | `A`        | `B`         | ✅        | ✅ ephemeral per call   | ⚠️ LLM reasoning only      | ✅ pipe               | Tool-enhanced structured interaction            |
+| `Automata`  | `A`        | `B`         | ✅        | ✅ durable / reflective | ✅ planning / goal setting | ✅ pipe / aggregation | Full agent loop with memory and decision-making |
+
+
+### Prompter
+
+The diagram below emphasis core building blocks for `Prompter`.
+
+```mermaid
+%%{init: {'theme':'neutral'}}%%
+graph TD
+    subgraph Interface
+    A[Type A]
+    B[Type B]
+    end
+    subgraph Agent
+    A --"01|input"--> E[Encoder]
+    E --"02|prompt"--> G((Agent))
+    G --"03|eval"--> L[LLM]
+    G --"04|reply"--> B
+    end
+```
+
+### Manifold
+
+The diagram below emphasis core building blocks for `Manifold`.
+
+```mermaid
+%%{init: {'theme':'neutral'}}%%
+graph TD
+    subgraph Interface
+    A[Type A]
+    B[Type B]
+    end
+    subgraph Commands
+    C[Command]
+    end
+    subgraph Agent
+    A --"01|input"--> E[Encoder]
+    E --"02|prompt"--> G((Agent))
+    G --"03|eval"--> L[LLM]
+    G -."04|exec".-> C
+    C -."05|result".-> G
+    G --"06|reply"--> D[Decoder]
+    D --"07|answer" --> B
+    end
+```
+
+### Automata
+
+The diagram below emphasis core building blocks for `Automata`.
 
 ```mermaid
 %%{init: {'theme':'neutral'}}%%
@@ -157,6 +228,7 @@ graph TD
     D --"11|answer" --> B
     end
 ```
+
 
 Following this architecture, the agent is assembled from building blocks as lego constructor:
 
@@ -213,8 +285,6 @@ const (
 
 The following [reasoner classes](https://pkg.go.dev/github.com/kshard/thinker/reasoner) are supported:
 * *Void* always sets a new goal to return results.
-* *Cmd* sets the goal for agent to execute a single command and return the result if/when successful.
-* *CmdSeq* sets the goal for reasoner to execute sequence of commands.
 * *From* is fundamental constuctor for application specific reasoners.
 * *Epoch* is pseudo reasoner, it limits number of itterations agent takes to solve a task.
 

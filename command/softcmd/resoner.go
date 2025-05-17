@@ -6,33 +6,32 @@
 // https://github.com/kshard/thinker
 //
 
-package reasoner
+package softcmd
 
 import (
 	"fmt"
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
-	"github.com/kshard/thinker/command"
 )
 
 // State of Command reasoner
-type StateCmd = thinker.State[thinker.CmdOut]
+type StateCmd = thinker.State[CmdOut]
 
 // The cmd (command) reasoner set the goal for agent to execute a single command.
 // It returns right after the command return results.
-type Cmd struct{}
+type CmdOne struct{}
 
-var _ thinker.Reasoner[thinker.CmdOut] = (*Cmd)(nil)
+var _ thinker.Reasoner[CmdOut] = (*CmdOne)(nil)
 
 // Creates new command reasoner.
-func NewCmd() *Cmd {
-	return &Cmd{}
+func NewReasonerCmd() *CmdOne {
+	return &CmdOne{}
 }
 
-func (task *Cmd) Purge() {}
+func (task *CmdOne) Purge() {}
 
-func (task *Cmd) Deduct(state StateCmd) (thinker.Phase, *chatter.Prompt, error) {
+func (task *CmdOne) Deduct(state StateCmd) (thinker.Phase, chatter.Message, error) {
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
 		prompt.WithTask("Refine the previous operation using the feedback below.")
@@ -54,15 +53,15 @@ func (task *Cmd) Deduct(state StateCmd) (thinker.Phase, *chatter.Prompt, error) 
 // The reason returns only after LLM uses return command.
 type CmdSeq struct{}
 
-var _ thinker.Reasoner[thinker.CmdOut] = (*CmdSeq)(nil)
+var _ thinker.Reasoner[CmdOut] = (*CmdSeq)(nil)
 
-func NewCmdSeq() *CmdSeq {
+func NewReasonerCmdSeq() *CmdSeq {
 	return &CmdSeq{}
 }
 
 func (task *CmdSeq) Purge() {}
 
-func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, *chatter.Prompt, error) {
+func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, chatter.Message, error) {
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
 		prompt.WithTask("Refine the previous workflow step using the feedback below.")
@@ -71,7 +70,7 @@ func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, *chatter.Prompt, erro
 		return thinker.AGENT_REFINE, &prompt, nil
 	}
 
-	if state.Reply.Cmd == command.RETURN {
+	if state.Reply.Cmd == RETURN {
 		return thinker.AGENT_RETURN, nil, nil
 	}
 
@@ -79,11 +78,9 @@ func (task *CmdSeq) Deduct(state StateCmd) (thinker.Phase, *chatter.Prompt, erro
 	if len(state.Reply.Cmd) != 0 {
 		var prompt chatter.Prompt
 		prompt.WithTask("Continue the workflow execution.")
-		prompt.With(
-			chatter.Blob(
-				fmt.Sprintf("TOOL:%s has returned:\n", state.Reply.Cmd),
-				state.Reply.Output,
-			),
+		prompt.WithBlob(
+			fmt.Sprintf("TOOL:%s has returned:\n", state.Reply.Cmd),
+			state.Reply.Output,
 		)
 
 		return thinker.AGENT_ASK, &prompt, nil

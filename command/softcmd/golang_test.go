@@ -6,7 +6,7 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
 	"testing"
@@ -15,16 +15,20 @@ import (
 	"github.com/kshard/chatter"
 )
 
-func TestPython(t *testing.T) {
-	cmd := Python("/tmp")
+func TestGolang(t *testing.T) {
+	cmd := Golang("/tmp")
 	reply := &chatter.Reply{
 		Content: []chatter.Content{
-			chatter.ContentText{Text: `<codeblock>
-import requests
-response = requests.get('https://example.com/')
-print(response)
+			chatter.Text(`<codeblock>
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("response")
+}
 </codeblock>
-`},
+`),
 		},
 	}
 	conf, out, err := cmd.Run(reply)
@@ -33,6 +37,6 @@ print(response)
 		it.Nil(err),
 		it.Equal(conf, 1.0),
 		it.Equal(out.Cmd, cmd.Cmd),
-		it.String(out.Output).Contain("Response [200]"),
+		it.String(out.Output).Contain("response"),
 	)
 }

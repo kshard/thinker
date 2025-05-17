@@ -14,13 +14,13 @@ import (
 )
 
 // From is helper to build Encoder[A] interface from pure function.
-func FromEncoder[A any](f func(A) (*chatter.Prompt, error)) thinker.Encoder[A] {
+func FromEncoder[A any](f func(A) (chatter.Message, error)) thinker.Encoder[A] {
 	return fEncoder[A](f)
 }
 
-type fEncoder[T any] func(T) (*chatter.Prompt, error)
+type fEncoder[T any] func(T) (chatter.Message, error)
 
-func (f fEncoder[T]) Encode(t T) (*chatter.Prompt, error) { return f(t) }
+func (f fEncoder[T]) Encode(t T) (chatter.Message, error) { return f(t) }
 
 // From is helper to build Decoder[B] interface from pure function.
 func FromDecoder[B any](f func(*chatter.Reply) (float64, B, error)) thinker.Decoder[B] {

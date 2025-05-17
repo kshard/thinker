@@ -8,7 +8,9 @@
 
 package thinker
 
-import "github.com/kshard/chatter"
+import (
+	"encoding/json"
+)
 
 // A Command defines an external tool or utility available to the agent for task-solving.
 // To ensure usability, each command must include a usage definition and description.
@@ -16,36 +18,29 @@ type Cmd struct {
 	// [Required] A unique name for the command, used as a reference by LLMs (e.g., "bash").
 	Cmd string
 
-	// [Required] A concise, one-line description of the command and its purpose.
+	// [Required] A description of the command and its purpose.
 	// Used to define the command registry for LLMs.
-	Short string
+	About string
 
 	// [Required] Concise instructions on the command's syntax.
 	// For example: "bash <command>".
 	Syntax string
 
-	// [Optional] A detailed, multi-line description to educate the LLM on command usage.
-	// Provides contextual information on how and when to use the command.
-	Long string
-
 	// [Optional] Specifies arguments, types, and additional context to guide
 	// the LLM on command syntax.
-	Args []string
+	Args []Arg
 
 	// The actual command execution function, which can be defined statically or
 	// dynamically upon registration.
-	Run func(*chatter.Reply) (float64, CmdOut, error)
+	Run func(json.RawMessage) ([]byte, error)
+}
+
+type Arg struct {
+	Name  string `json:"-"`
+	Type  string `json:"type"`
+	About string `json:"description"`
 }
 
 func (cmd Cmd) IsValid() bool {
-	return len(cmd.Cmd) != 0 && len(cmd.Short) != 0 && len(cmd.Syntax) != 0 && cmd.Run != nil
-}
-
-// Container for command results.
-type CmdOut struct {
-	// A unique name of the command, used to getnerate output.
-	Cmd string
-
-	// Output of the command.
-	Output string
+	return len(cmd.Cmd) != 0 && len(cmd.About) != 0 && cmd.Run != nil
 }

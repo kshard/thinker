@@ -9,7 +9,6 @@
 package memory
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/fogfish/guid/v2"
@@ -64,8 +63,8 @@ func (s *Stream) Commit(e *thinker.Observation) {
 }
 
 // Builds the context window for LLM using incoming prompt.
-func (s *Stream) Context(prompt *chatter.Prompt) []fmt.Stringer {
-	seq := make([]fmt.Stringer, 0)
+func (s *Stream) Context(prompt chatter.Message) []chatter.Message {
+	seq := make([]chatter.Message, 0)
 	if len(s.stratum) > 0 {
 		seq = append(seq, s.stratum)
 	}

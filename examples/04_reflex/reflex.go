@@ -16,13 +16,13 @@ import (
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/aio"
 	"github.com/kshard/chatter/llm/autoconfig"
-	"github.com/kshard/thinker/agent"
+	"github.com/kshard/thinker/agent/worker"
 	"github.com/kshard/thinker/codec"
-	"github.com/kshard/thinker/command"
+	"github.com/kshard/thinker/command/softcmd"
 )
 
-func encode(q string) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func encode(q string) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`
 		Use available tools to complete the workflow:
 		(1) Create 5 files one by one with few lines of random text, at least one line shall contain "%s".
@@ -30,13 +30,13 @@ func encode(q string) (prompt *chatter.Prompt, err error) {
 		(3) Replace the only found string with "XXXXX".
 		(4) Validate completion of task by checking "%s" in the files and fix your self if it still exists.`, q, q, q)
 
-	return
+	return &prompt, nil
 }
 
 func main() {
 	// enable `shell` command for the agent, the command is sandbox to the dir.
-	registry := command.NewRegistry()
-	registry.Register(command.Bash("MacOS", "/tmp/script"))
+	registry := softcmd.NewRegistry()
+	registry.Register(softcmd.Bash("MacOS", "/tmp/script"))
 
 	// create instance of LLM API, see doc/HOWTO.md for details
 	llm, err := autoconfig.New("thinker")
@@ -45,9 +45,9 @@ func main() {
 	}
 
 	// We create an agent that executes the workflow.
-	agt := agent.NewWorker(
+	agt := worker.NewReflex(
 		// enable debug output for LLMs dialog
-		aio.NewLogger(os.Stdout, llm),
+		aio.NewJsonLogger(os.Stdout, llm),
 
 		// Number of attempts to resolve the task
 		4,

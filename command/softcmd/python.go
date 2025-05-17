@@ -6,16 +6,16 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
 )
 
@@ -23,18 +23,12 @@ import (
 const PYTHON = "python"
 
 // Create new python command, defining working dir
-func Python(dir string) thinker.Cmd {
-	return thinker.Cmd{
-		Cmd:   PYTHON,
-		About: "Executed python scripts.",
-		Args: []thinker.Arg{
-			{
-				Name:  "script",
-				Type:  "string",
-				About: `script is python program.`,
-			},
-		},
-		Run: python(dir),
+func Python(dir string) Cmd {
+	return Cmd{
+		Cmd:    PYTHON,
+		About:  "Use python to execute scripts that help you complete your task. Enclose the python code in <codeblock> tags.",
+		Syntax: `python <codeblock>source code</codeblock>`,
+		Run:    python(dir),
 	}
 }
 
@@ -98,28 +92,24 @@ func pyfile(dir, code string) (string, error) {
 	return fd.Name(), nil
 }
 
-func python(dir string) func(json.RawMessage) ([]byte, error) {
-	return func(command json.RawMessage) ([]byte, error) {
+func python(dir string) func(*chatter.Reply) (float64, CmdOut, error) {
+	return func(command *chatter.Reply) (float64, CmdOut, error) {
 		if err := pySetup(dir); err != nil {
-			return nil, err
+			return 0.0, CmdOut{}, err
 		}
 
-		var code script
-		if err := json.Unmarshal(command, &code); err != nil {
-			err := thinker.Feedback(
-				"The input does not contain valid JSON object",
-				"JSON parsing has failed with an error "+err.Error(),
-			)
-			return nil, err
-		}
-
-		file, err := pyfile(dir, code.Script)
+		code, err := CodeBlock(PYTHON, command.String())
 		if err != nil {
-			return nil, err
+			return 0.00, CmdOut{Cmd: PYTHON}, err
+		}
+
+		file, err := pyfile(dir, code)
+		if err != nil {
+			return 0.00, CmdOut{Cmd: PYTHON}, err
 		}
 
 		if err := pyDeps(dir); err != nil {
-			return nil, err
+			return 0.0, CmdOut{}, err
 		}
 
 		pyenv := filepath.Join(dir, ".venv")
@@ -132,15 +122,15 @@ func python(dir string) func(json.RawMessage) ([]byte, error) {
 
 		if err := cmd.Run(); err != nil {
 			err = thinker.Feedback(
-				fmt.Sprintf("The tool %s has failed, improve the response based on feedback:", PYTHON),
+				fmt.Sprintf("The TOOL:%s has failed, improve the response based on feedback:", PYTHON),
 
 				`Strictly adhere python code formatting, use \t, \n where is needed`,
 				"Execution of python script is failed with the error: "+err.Error(),
 				"The error output is "+stderr.String(),
 			)
-			return nil, err
+			return 0.05, CmdOut{Cmd: PYTHON}, err
 		}
 
-		return stdout.Bytes(), nil
+		return 1.0, CmdOut{Cmd: PYTHON, Output: stdout.String()}, nil
 	}
 }

@@ -6,7 +6,7 @@
 // https://github.com/kshard/thinker
 //
 
-package reasoner_test
+package softcmd_test
 
 import (
 	"testing"
@@ -14,16 +14,15 @@ import (
 	"github.com/fogfish/it/v2"
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
-	"github.com/kshard/thinker/command"
-	"github.com/kshard/thinker/reasoner"
+	"github.com/kshard/thinker/command/softcmd"
 )
 
 func TestCmdDeduct(t *testing.T) {
-	r := reasoner.NewCmd()
+	r := softcmd.NewReasonerCmd()
 
 	t.Run("Refine", func(t *testing.T) {
-		phase, prompt, err := r.Deduct(reasoner.StateCmd{
-			Feedback:   chatter.Feedback("feedback"),
+		phase, prompt, err := r.Deduct(softcmd.StateCmd{
+			Feedback:   &chatter.Feedback{Note: "feedback"},
 			Confidence: 0.1,
 		})
 
@@ -35,8 +34,8 @@ func TestCmdDeduct(t *testing.T) {
 	})
 
 	t.Run("Return", func(t *testing.T) {
-		phase, _, err := r.Deduct(reasoner.StateCmd{
-			Reply: thinker.CmdOut{Cmd: command.BASH, Output: "Bash Output"},
+		phase, _, err := r.Deduct(softcmd.StateCmd{
+			Reply: softcmd.CmdOut{Cmd: softcmd.BASH, Output: "Bash Output"},
 		})
 
 		it.Then(t).Should(
@@ -46,21 +45,20 @@ func TestCmdDeduct(t *testing.T) {
 	})
 
 	t.Run("Abort", func(t *testing.T) {
-		phase, _, _ := r.Deduct(reasoner.StateCmd{})
+		phase, _, _ := r.Deduct(softcmd.StateCmd{})
 
 		it.Then(t).Should(
 			it.Equal(phase, thinker.AGENT_ABORT),
 		)
 	})
-
 }
 
 func TestCmdSeqDeduct(t *testing.T) {
-	r := reasoner.NewCmdSeq()
+	r := softcmd.NewReasonerCmdSeq()
 
 	t.Run("Refine", func(t *testing.T) {
-		phase, prompt, err := r.Deduct(reasoner.StateCmd{
-			Feedback:   chatter.Feedback("feedback"),
+		phase, prompt, err := r.Deduct(softcmd.StateCmd{
+			Feedback:   &chatter.Feedback{Note: "feedback"},
 			Confidence: 0.1,
 		})
 
@@ -72,8 +70,8 @@ func TestCmdSeqDeduct(t *testing.T) {
 	})
 
 	t.Run("Return", func(t *testing.T) {
-		phase, _, err := r.Deduct(reasoner.StateCmd{
-			Reply: thinker.CmdOut{Cmd: command.RETURN},
+		phase, _, err := r.Deduct(softcmd.StateCmd{
+			Reply: softcmd.CmdOut{Cmd: softcmd.RETURN},
 		})
 
 		it.Then(t).Should(
@@ -83,8 +81,8 @@ func TestCmdSeqDeduct(t *testing.T) {
 	})
 
 	t.Run("Continue", func(t *testing.T) {
-		phase, prompt, err := r.Deduct(reasoner.StateCmd{
-			Reply: thinker.CmdOut{Cmd: command.BASH, Output: "Bash Output"},
+		phase, prompt, err := r.Deduct(softcmd.StateCmd{
+			Reply: softcmd.CmdOut{Cmd: softcmd.BASH, Output: "Bash Output"},
 		})
 
 		it.Then(t).Should(
@@ -96,7 +94,7 @@ func TestCmdSeqDeduct(t *testing.T) {
 	})
 
 	t.Run("Abort", func(t *testing.T) {
-		phase, _, _ := r.Deduct(reasoner.StateCmd{})
+		phase, _, _ := r.Deduct(softcmd.StateCmd{})
 
 		it.Then(t).Should(
 			it.Equal(phase, thinker.AGENT_ABORT),

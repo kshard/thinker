@@ -58,6 +58,11 @@ func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 	var nul B
 	state := thinker.State[B]{Phase: thinker.AGENT_ASK, Epoch: 0}
 
+	switch v := automata.llm.(type) {
+	case interface{ ResetQuota() }:
+		v.ResetQuota()
+	}
+
 	prompt, err := automata.encoder.Encode(input)
 	if err != nil {
 		return nul, err

@@ -6,28 +6,27 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
 	"github.com/kshard/chatter"
-	"github.com/kshard/thinker"
 )
 
 // A unique name for return command
 const RETURN = "return"
 
 // Creates new return command, instructing LLM return results
-func Return() thinker.Cmd {
-	return thinker.Cmd{
+func Return() Cmd {
+	return Cmd{
 		Cmd:    RETURN,
-		Short:  "indicate that workflow is completed, the agent return expected results",
+		About:  "indicate that workflow is completed, the agent return expected results",
 		Syntax: "return <codeblock>value to return</codeblock>",
-		Run: func(t *chatter.Reply) (float64, thinker.CmdOut, error) {
+		Run: func(t *chatter.Reply) (float64, CmdOut, error) {
 			code, err := CodeBlock(RETURN, t.String())
 			if err != nil {
-				return 0.00, thinker.CmdOut{Cmd: RETURN}, err
+				return 0.00, CmdOut{Cmd: RETURN}, err
 			}
-			return 1.0, thinker.CmdOut{Cmd: RETURN, Output: code}, nil
+			return 1.0, CmdOut{Cmd: RETURN, Output: code}, nil
 		},
 	}
 }

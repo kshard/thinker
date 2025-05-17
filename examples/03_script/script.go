@@ -20,16 +20,17 @@ import (
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
+	"github.com/kshard/thinker/command/softcmd"
 	"github.com/kshard/thinker/memory"
 	"github.com/kshard/thinker/reasoner"
 )
 
 // declares command registry
-var registry = command.NewRegistry()
+var registry = softcmd.NewRegistry()
 
 // Define the workflow for LLM
-func encode(q string) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func encode(q string) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`
 		Use available tools to complete the workflow:
 		(1) Create 5 files one by one with few lines of random text, at least one line shall contain "%s".
@@ -38,13 +39,14 @@ func encode(q string) (prompt *chatter.Prompt, err error) {
 		(4) Validate completion of task by checking "%s" in the files and fix your self if it still exists.`, q, q, q)
 
 	// Inject tools
-	registry.Harden(prompt)
-	return
+	registry.Harden(&prompt)
+
+	return &prompt, nil
 }
 
 // deduct new goal for the agent to pursue.
 // Note, the agent uses registry as decoder therefore agent  is string -> thinker.CmdOut
-func deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, *chatter.Prompt, error) {
+func deduct(state thinker.State[softcmd.CmdOut]) (thinker.Phase, chatter.Message, error) {
 	// the registry has failed to execute command, we have to supply the feedback to LLM
 	if state.Feedback != nil && state.Confidence < 1.0 {
 		var prompt chatter.Prompt
@@ -64,9 +66,7 @@ func deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, *chatter.Prompt
 	if state.Reply.Cmd == command.BASH {
 		var prompt chatter.Prompt
 		prompt.WithTask("Continue the workflow execution.")
-		prompt.With(
-			chatter.Blob("The command has returned:\n", state.Reply.Output),
-		)
+		prompt.WithBlob("The command has returned:\n", state.Reply.Output)
 
 		return thinker.AGENT_ASK, &prompt, nil
 	}
@@ -76,10 +76,10 @@ func deduct(state thinker.State[thinker.CmdOut]) (thinker.Phase, *chatter.Prompt
 
 func main() {
 	// enable `shell` command for the agent, the command is sandbox to the dir.
-	registry.Register(command.Bash("MacOS", "/tmp/script"))
+	registry.Register(softcmd.Bash("MacOS", "/tmp/script"))
 
 	// enable pseudo tool for LLM to emphasis completion of the task
-	registry.Register(command.Return())
+	registry.Register(softcmd.Return())
 
 	// create instance of LLM API, see doc/HOWTO.md for details
 	llm, err := autoconfig.New("thinker")
@@ -90,7 +90,7 @@ func main() {
 	// We create an agent that executes the workflow.
 	agt := agent.NewAutomata(
 		// enable debug output for LLMs dialog
-		aio.NewLogger(os.Stdout, llm),
+		aio.NewJsonLogger(os.Stdout, llm),
 
 		// Configures memory for the agent. Typically, memory retains all of
 		// the agent's observations. Here, we use a stream memory that holds all observations.

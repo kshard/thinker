@@ -19,26 +19,21 @@ import (
 
 // This function is core in the example. It takes input (the sentence)
 // and generate prompt function that guides LLMs on how to create anagram.
-func anagram(expr string) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
-	prompt.
-		WithTask("Create anagram using the phrase: %s", expr).
-		With(
-			// instruct LLM about anagram generation
-			chatter.Rules(
-				"Strictly adhere to the following requirements when generating a response.",
-				"The output must be the resulting anagram only.",
-			),
-		).
-		With(
-			// Gives the example of input and expected output
-			chatter.Example{
-				Input: "Madam Curie",
-				Reply: "Radium came",
-			},
-		)
+func anagram(expr string) (chatter.Message, error) {
+	var prompt chatter.Prompt
 
-	return
+	prompt.WithTask("Create anagram using the phrase: %s", expr)
+
+	// instruct LLM about anagram generation
+	prompt.WithRules(
+		"Strictly adhere to the following requirements when generating a response.",
+		"The output must be the resulting anagram only.",
+	)
+
+	// Gives the example of input and expected output
+	prompt.WithExample("Madam Curie", "Radium came")
+
+	return &prompt, nil
 }
 
 func main() {
