@@ -6,22 +6,28 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/fogfish/it/v2"
+	"github.com/kshard/chatter"
 )
 
 func TestBash(t *testing.T) {
-	cmd := Bash("", "/tmp/cmd")
-	reply := json.RawMessage(`{"script": "echo xxx"}`)
-	out, err := cmd.Run(reply)
+	cmd := Bash("", "/tmp/softcmd")
+	reply := &chatter.Reply{
+		Content: []chatter.Content{
+			chatter.Text(`<codeblock>echo "xxx"</codeblock>`),
+		},
+	}
+	conf, out, err := cmd.Run(reply)
 
 	it.Then(t).Should(
 		it.Nil(err),
-		it.Greater(len(out), 0),
+		it.Equal(conf, 1.0),
+		it.Equal(out.Cmd, cmd.Cmd),
+		it.Greater(len(out.Output), 0),
 	)
 }

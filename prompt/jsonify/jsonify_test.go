@@ -34,7 +34,7 @@ func TestStrings(t *testing.T) {
 		var seq []string
 		reply := &chatter.Reply{
 			Content: []chatter.Content{
-				chatter.ContentText{Text: ` ["a", "b", "c"] `},
+				chatter.Text(` ["a", "b", "c"] `),
 			},
 		}
 		err := jsonify.Strings.Decode(reply, &seq)
@@ -53,7 +53,7 @@ func TestStrings(t *testing.T) {
 			var seq []string
 			reply := &chatter.Reply{
 				Content: []chatter.Content{
-					chatter.ContentText{Text: in},
+					chatter.Text(in),
 				},
 			}
 			err := jsonify.Strings.Decode(reply, &seq)

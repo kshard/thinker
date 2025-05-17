@@ -17,7 +17,8 @@ import (
 	"github.com/kshard/chatter/llm/autoconfig"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
-	"github.com/kshard/thinker/command"
+	"github.com/kshard/thinker/agent/worker"
+	"github.com/kshard/thinker/command/softcmd"
 )
 
 //------------------------------------------------------------------------------
@@ -33,38 +34,38 @@ func NewAgentA(llm chatter.Chatter) *AgentA {
 	return agt
 }
 
-func (AgentA) story(subj string) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func (AgentA) story(subj string) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask("Create a short story about 140 characters about %s.", subj)
-	return
+	return &prompt, nil
 }
 
 //------------------------------------------------------------------------------
 
 // The agent creates workflow to process local files, see Script example for details
 type AgentB struct {
-	*agent.Worker[string]
+	*worker.Reflex[string]
 }
 
 func NewAgentB(llm chatter.Chatter) *AgentB {
-	registry := command.NewRegistry()
-	registry.Register(command.Bash("MacOS", "/tmp/script"))
+	registry := softcmd.NewRegistry()
+	registry.Register(softcmd.Bash("MacOS", "/tmp/script"))
 
 	agt := &AgentB{}
-	agt.Worker = agent.NewWorker(llm, 4, thinker.Encoder[string](agt), registry)
+	agt.Reflex = worker.NewReflex(llm, 4, thinker.Encoder[string](agt), registry)
 
 	return agt
 }
 
-func (agt AgentB) Encode(string) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func (agt AgentB) Encode(string) (chatter.Message, error) {
+	var prompt chatter.Prompt
 	prompt.WithTask(`
 		Use available tools to complete the workflow:
 		(1) Use available tools to read files one by one.
 		(2) Analyse file content and answer the question: Who is main character in the story? Remember the answer in your context.
 		(3) Return all Remembered answers as comma separated string.`)
 
-	return
+	return &prompt, nil
 }
 
 //------------------------------------------------------------------------------
@@ -105,13 +106,13 @@ func main() {
 	fmt.Printf("==> %s\n", reply.Output)
 }
 
-func txt2file(x string) error {
+func txt2file(x *chatter.Reply) error {
 	fd, err := os.CreateTemp("/tmp/script", "*.txt")
 	if err != nil {
 		return err
 	}
 	defer fd.Close()
-	if _, err := fd.WriteString(x); err != nil {
+	if _, err := fd.WriteString(x.String()); err != nil {
 		return err
 	}
 	return nil

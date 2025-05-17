@@ -6,7 +6,7 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
 	"fmt"

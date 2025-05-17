@@ -18,20 +18,18 @@ import (
 	"github.com/kshard/chatter/aio"
 	"github.com/kshard/chatter/llm/autoconfig"
 	"github.com/kshard/thinker"
-	"github.com/kshard/thinker/agent"
+	"github.com/kshard/thinker/agent/worker"
 	"github.com/kshard/thinker/codec"
 )
 
 // Ask LLMs about colors of rainbow
-func encode(any) (prompt *chatter.Prompt, err error) {
-	prompt = new(chatter.Prompt)
+func encode(any) (chatter.Message, error) {
+	var prompt chatter.Prompt
+
 	prompt.WithTask("Return colors of the rainbow.")
+	prompt.WithGuide("Use the context and conversation history to find the right answer.")
 
-	prompt.With(
-		chatter.Guide("Use the context and conversation history to find the right answer."),
-	)
-
-	return
+	return &prompt, nil
 }
 
 // Validate sequence of colors, expecting invisible spectrum.
@@ -56,9 +54,9 @@ func main() {
 		panic(err)
 	}
 
-	agt := agent.NewJsonify(
+	agt := worker.NewJsonify(
 		// enable debug output for LLMs dialog
-		aio.NewLogger(os.Stdout, llm),
+		aio.NewJsonLogger(os.Stdout, llm),
 
 		// attempts to request JSON
 		4,

@@ -9,29 +9,30 @@
 package command
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
 )
 
-// The command registry, used by the application to define available tools and
-// commands for workflows. It automates the advertisement of registered commands
-// and their usage rules.
 type Registry struct {
 	mu       sync.Mutex
 	registry map[string]thinker.Cmd
+	cmds     chatter.Registry
 }
 
-var _ thinker.Decoder[thinker.CmdOut] = (*Registry)(nil)
+var _ thinker.Registry = (*Registry)(nil)
 
-// Creates new command registry.
 func NewRegistry() *Registry {
-	return &Registry{
+	r := &Registry{
 		registry: make(map[string]thinker.Cmd),
+		cmds:     chatter.Registry{},
 	}
+	r.Register(Return())
+	return r
 }
 
 // Register new command
@@ -47,76 +48,101 @@ func (r *Registry) Register(cmd thinker.Cmd) error {
 		return thinker.ErrCmdInvalid
 	}
 
+	c, err := convert(cmd)
+	if err != nil {
+		return thinker.ErrCmdInvalid
+	}
+
 	r.registry[cmd.Cmd] = cmd
+	r.cmds = append(r.cmds, c)
 	return nil
 }
 
-// Injects requirments for LLM about available tooling
-func (r *Registry) Harden(prompt *chatter.Prompt) {
-	prompt.With(
-		chatter.Rules(
-			`Strictly adhere to the following requirements when generating a response.
-			Do not deviate, ignore, or modify any aspect of them:`,
+func (r *Registry) Context() chatter.Registry { return r.cmds }
 
-			"When you need to execute a command, output a structured command using the syntax defined by the commands registry.",
-			"Implement the sequential workflow, output single command only and wait for result to decide next action.",
-			"Do not assume availability of any command.",
-			"Do not invent commands that are not explicitly allowed.",
-		),
-	)
+func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message, error) {
+	var hasReturn = false
 
-	seq := make([]string, 0)
-	for _, app := range r.registry {
-		cmd := fmt.Sprintf("%s: %s, use the syntax to invoke: TOOL:%s", app.Cmd, app.Short, app.Syntax)
-		seq = append(seq, cmd)
-	}
-
-	prompt.With(
-		chatter.Context("Allowed commands registry:", seq...),
-	)
-
-	for _, app := range r.registry {
-		if len(app.Long) != 0 {
-			seq := make([]string, 0)
-			if len(app.Args) != 0 {
-				seq = append(seq, fmt.Sprintf("TOOL:%s takes parameters: %s", app.Cmd, strings.Join(app.Args, ",")))
-			}
-			seq = append(seq, app.Long)
-
-			prompt.With(
-				chatter.Context(
-					fmt.Sprintf("Detailed instructions about the TOOL:%s", app.Cmd),
-					seq...,
-				),
+	answer, err := reply.Invoke(func(name string, args json.RawMessage) (json.RawMessage, error) {
+		cmd, has := r.registry[name]
+		if !has {
+			return nil, thinker.Feedback(
+				fmt.Sprintf("the tool %s is unknown to the client.", name),
 			)
 		}
-	}
-}
 
-// Transform LLM response into the command invokation, returns the result of command.
-func (r *Registry) Decode(reply *chatter.Reply) (float64, thinker.CmdOut, error) {
-	s := reply.String()
-	at := strings.Index(s, "TOOL:")
-	if at > -1 {
-		for name, cmd := range r.registry {
-			if strings.HasPrefix(s[at+5:], name) {
-				in := &chatter.Reply{
-					Stage: chatter.LLM_RETURN,
-					Content: []chatter.Content{
-						chatter.ContentText{Text: s[5+len(name):]},
-					},
-					Usage: reply.Usage,
-				}
-				return cmd.Run(in)
+		b, err := cmd.Run(args)
+		if err != nil {
+			var feedback chatter.Content
+			if ok := errors.As(err, &feedback); !ok {
+				return nil, err
+			}
+
+			exx := feedback.String()
+			return pack([]byte(exx))
+		}
+
+		if name == RETURN {
+			hasReturn = true
+			return b, nil
+		}
+
+		return pack(b)
+	})
+
+	if err != nil {
+		return thinker.AGENT_ABORT, nil, err
+	}
+
+	if hasReturn {
+		for _, yield := range answer.Yield {
+			if yield.Source == RETURN {
+				return thinker.AGENT_RETURN, chatter.Text(yield.Value), nil
 			}
 		}
+
+		return thinker.AGENT_RETURN, nil, nil
 	}
 
-	err := thinker.Feedback(
-		`Improve the response based on feedback:`,
-		"The output does not contain valid reference to the tool.",
-		"No pattern TOOL:... is found in the output.",
-	)
+	return thinker.AGENT_ASK, answer, nil
+}
 
-	return 0.0, thinker.CmdOut{}, err
+func convert(cmd thinker.Cmd) (chatter.Cmd, error) {
+	required := make([]string, 0)
+	properties := map[string]any{}
+	for _, arg := range cmd.Args {
+		properties[arg.Name] = arg
+		required = append(required, arg.Name)
+	}
+
+	schema := map[string]any{
+		"type":       "object",
+		"properties": properties,
+		"required":   required,
+	}
+
+	raw, err := json.Marshal(schema)
+	if err != nil {
+		return chatter.Cmd{}, err
+	}
+
+	return chatter.Cmd{
+		Cmd:    cmd.Cmd,
+		About:  cmd.About,
+		Schema: raw,
+	}, nil
+}
+
+func pack(b []byte) (json.RawMessage, error) {
+	pckt := map[string]any{
+		"toolOutput": string(b),
+	}
+
+	bin, err := json.Marshal(pckt)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.RawMessage(bin), nil
+
 }

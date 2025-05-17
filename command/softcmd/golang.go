@@ -6,16 +6,16 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
 )
 
@@ -23,18 +23,12 @@ import (
 const GOLANG = "go"
 
 // Create new Golang command, defining goroot
-func Golang(gopath string) thinker.Cmd {
-	return thinker.Cmd{
-		Cmd:   GOLANG,
-		About: "Compiles and runs Golang programs, scripts as package main.",
-		Args: []thinker.Arg{
-			{
-				Name:  "script",
-				Type:  "string",
-				About: `script is main.go file containing the the program, it is executed with go run main.go.`,
-			},
-		},
-		Run: golang(gopath),
+func Golang(gopath string) Cmd {
+	return Cmd{
+		Cmd:    GOLANG,
+		About:  "Use golang to execute scripts (package main) that help you complete your task. Enclose the golang code in <codeblock> tags.",
+		Syntax: `go <codeblock>source code</codeblock>`,
+		Run:    golang(gopath),
 	}
 }
 
@@ -104,28 +98,24 @@ func gofile(gopath, code string) (string, error) {
 	return filepath.Join(filepath.Base(dir), "main.go"), nil
 }
 
-func golang(gopath string) func(json.RawMessage) ([]byte, error) {
-	return func(command json.RawMessage) ([]byte, error) {
+func golang(gopath string) func(*chatter.Reply) (float64, CmdOut, error) {
+	return func(command *chatter.Reply) (float64, CmdOut, error) {
 		if err := goSetup(gopath); err != nil {
-			return nil, err
+			return 0.0, CmdOut{}, err
 		}
 
-		var code script
-		if err := json.Unmarshal(command, &code); err != nil {
-			err := thinker.Feedback(
-				"The input does not contain valid JSON object",
-				"JSON parsing has failed with an error "+err.Error(),
-			)
-			return nil, err
-		}
-
-		file, err := gofile(gopath, code.Script)
+		code, err := CodeBlock(GOLANG, command.String())
 		if err != nil {
-			return nil, err
+			return 0.00, CmdOut{Cmd: GOLANG}, err
+		}
+
+		file, err := gofile(gopath, code)
+		if err != nil {
+			return 0.00, CmdOut{Cmd: GOLANG}, err
 		}
 
 		if err := goDeps(gopath); err != nil {
-			return nil, err
+			return 0.0, CmdOut{}, err
 		}
 
 		cmd := exec.Command("go", "run", file)
@@ -141,14 +131,14 @@ func golang(gopath string) func(json.RawMessage) ([]byte, error) {
 
 		if err := cmd.Run(); err != nil {
 			err = thinker.Feedback(
-				fmt.Sprintf("The tool %s has failed, improve the response based on feedback:", GOLANG),
+				fmt.Sprintf("The TOOL:%s has failed, improve the response based on feedback:", GOLANG),
 
 				"Execution of golang program is failed with the error: "+err.Error(),
 				"The error output is "+stderr.String(),
 			)
-			return nil, err
+			return 0.05, CmdOut{Cmd: GOLANG}, err
 		}
 
-		return stdout.Bytes(), nil
+		return 1.0, CmdOut{Cmd: GOLANG, Output: stdout.String()}, nil
 	}
 }

@@ -22,5 +22,5 @@ type Reasoner[B any] interface {
 	Purge()
 
 	// Deduct new goal for the agent to pursue.
-	Deduct(State[B]) (Phase, *chatter.Prompt, error)
+	Deduct(State[B]) (Phase, chatter.Message, error)
 }

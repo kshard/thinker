@@ -6,18 +6,20 @@
 // https://github.com/kshard/thinker
 //
 
-package command
+package softcmd
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/fogfish/it/v2"
+	"github.com/kshard/chatter"
 )
 
 func TestGolang(t *testing.T) {
-	cmd := Golang("/tmp/cmd")
-	script := `
+	cmd := Golang("/tmp/softcmd")
+	reply := &chatter.Reply{
+		Content: []chatter.Content{
+			chatter.Text(`<codeblock>
 package main
 
 import "fmt"
@@ -25,12 +27,16 @@ import "fmt"
 func main() {
 	fmt.Println("response")
 }
-`
-	reply, _ := json.Marshal(map[string]any{"script": script})
-	out, err := cmd.Run(json.RawMessage(reply))
+</codeblock>
+`),
+		},
+	}
+	conf, out, err := cmd.Run(reply)
 
 	it.Then(t).Should(
 		it.Nil(err),
-		it.String(out).Contain("response"),
+		it.Equal(conf, 1.0),
+		it.Equal(out.Cmd, cmd.Cmd),
+		it.String(out.Output).Contain("response"),
 	)
 }

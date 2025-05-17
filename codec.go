@@ -13,7 +13,7 @@ import "github.com/kshard/chatter"
 // Used by agtent to converts structured object into LLM prompt.
 type Encoder[T any] interface {
 	// Encodes type T into LLM prompt.
-	Encode(T) (*chatter.Prompt, error)
+	Encode(T) (chatter.Message, error)
 }
 
 // Used by agent to converts LLM's reply into structured object.
@@ -26,9 +26,5 @@ type Decoder[T any] interface {
 
 // Creates feedback for the LLM, packaging it as an error for use by the Decoder and Reasoner.
 func Feedback(note string, text ...string) error {
-	return feedback{chatter.Feedback(note, text...)}
+	return chatter.Feedback{Note: note, Text: text}
 }
-
-type feedback struct{ chatter.Snippet }
-
-func (s feedback) Error() string { return s.String() }

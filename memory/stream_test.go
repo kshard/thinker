@@ -25,7 +25,7 @@ func TestStream(t *testing.T) {
 
 		reply := &chatter.Reply{
 			Content: []chatter.Content{
-				chatter.ContentText{Text: "reply."},
+				chatter.Text("reply."),
 			},
 		}
 		f := thinker.NewObservation(&prompt, reply)
@@ -54,19 +54,19 @@ func TestStream(t *testing.T) {
 	t.Run("Evict", func(t *testing.T) {
 		a := thinker.NewObservation(
 			&chatter.Prompt{Task: "0."},
-			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "0."}}},
+			&chatter.Reply{Content: []chatter.Content{chatter.Text("0.")}},
 		)
 		s.Commit(a)
 
 		b := thinker.NewObservation(
 			&chatter.Prompt{Task: "a."},
-			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "a."}}},
+			&chatter.Reply{Content: []chatter.Content{chatter.Text("a.")}},
 		)
 		s.Commit(b)
 
 		c := thinker.NewObservation(
 			&chatter.Prompt{Task: "b."},
-			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "b."}}},
+			&chatter.Reply{Content: []chatter.Content{chatter.Text("b.")}},
 		)
 		s.Commit(c)
 
@@ -83,13 +83,13 @@ func TestStream(t *testing.T) {
 	t.Run("Purge", func(t *testing.T) {
 		a := thinker.NewObservation(
 			&chatter.Prompt{Task: "a."},
-			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "a."}}},
+			&chatter.Reply{Content: []chatter.Content{chatter.Text("a.")}},
 		)
 		s.Commit(a)
 
 		b := thinker.NewObservation(
 			&chatter.Prompt{Task: "b."},
-			&chatter.Reply{Content: []chatter.Content{chatter.ContentText{Text: "b."}}},
+			&chatter.Reply{Content: []chatter.Content{chatter.Text("b.")}},
 		)
 		s.Commit(b)
 

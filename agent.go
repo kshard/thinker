@@ -43,5 +43,5 @@ type State[B any] struct {
 	Confidence float64
 
 	// Feedback to LLM
-	Feedback chatter.Section
+	Feedback chatter.Content
 }

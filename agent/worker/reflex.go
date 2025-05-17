@@ -6,34 +6,35 @@
 // https://github.com/kshard/thinker
 //
 
-package agent
+package worker
 
 import (
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
+	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
-	"github.com/kshard/thinker/command"
+	"github.com/kshard/thinker/command/softcmd"
 	"github.com/kshard/thinker/memory"
 	"github.com/kshard/thinker/reasoner"
 )
 
 // The agent tailored for executing prompt driven workflow.
-type Worker[A any] struct {
-	*Automata[A, thinker.CmdOut]
+type Reflex[A any] struct {
+	*agent.Automata[A, softcmd.CmdOut]
 	encoder  thinker.Encoder[A]
-	registry *command.Registry
+	registry *softcmd.Registry
 }
 
-func NewWorker[A any](
+func NewReflex[A any](
 	llm chatter.Chatter,
 	attempts int,
 	encoder thinker.Encoder[A],
-	registry *command.Registry,
-) *Worker[A] {
-	registry.Register(command.Return())
+	registry *softcmd.Registry,
+) *Reflex[A] {
+	registry.Register(softcmd.Return())
 
-	w := &Worker[A]{encoder: encoder, registry: registry}
-	w.Automata = NewAutomata(
+	w := &Reflex[A]{encoder: encoder, registry: registry}
+	w.Automata = agent.NewAutomata(
 		llm,
 
 		// Configures memory for the agent. Typically, memory retains all of
@@ -55,16 +56,16 @@ func NewWorker[A any](
 		// Configures the reasoner, which determines the agent's next actions and prompts.
 		// Here, we use a sequence of command reasoner, it assumes that input prompt is
 		// the workflow based on command. LLM guided to execute entire workflow.
-		reasoner.NewEpoch(attempts, reasoner.NewCmdSeq()),
+		reasoner.NewEpoch(attempts, softcmd.NewReasonerCmdSeq()),
 	)
 
 	return w
 }
 
-func (w *Worker[A]) encode(in A) (prompt *chatter.Prompt, err error) {
+func (w *Reflex[A]) encode(in A) (prompt chatter.Message, err error) {
 	prompt, err = w.encoder.Encode(in)
 	if err == nil {
-		w.registry.Harden(prompt)
+		w.registry.Harden(prompt.(*chatter.Prompt))
 	}
 
 	return

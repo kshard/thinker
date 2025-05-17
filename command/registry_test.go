@@ -9,6 +9,7 @@
 package command
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/fogfish/it/v2"
@@ -19,7 +20,7 @@ func TestRegistry(t *testing.T) {
 	r := NewRegistry()
 
 	t.Run("Register", func(t *testing.T) {
-		cmd := Return()
+		cmd := Bash("MacOS", "/tmp")
 		err := r.Register(cmd)
 
 		it.Then(t).Should(
@@ -36,51 +37,18 @@ func TestRegistry(t *testing.T) {
 		)
 	})
 
-	t.Run("Harden", func(t *testing.T) {
-		var prompt chatter.Prompt
-		r.Harden(&prompt)
-
-		str := prompt.String()
-		cmd := Return()
+	t.Run("Context", func(t *testing.T) {
+		reg := r.Context()
 
 		it.Then(t).Should(
-			it.String(str).Contain("TOOL:"+cmd.Cmd),
-			it.String(str).Contain(cmd.Short),
-			it.String(str).Contain(cmd.Syntax),
+			it.Seq(reg).Contain(
+				chatter.Cmd{
+					Cmd:    RETURN,
+					About:  "indicate that workflow is completed and returns the expected result.",
+					Schema: json.RawMessage(`{"properties":{"value":{"type":"string","description":"value to return as the workflow completion"}},"required":["value"],"type":"object"}`),
+				},
+			),
 		)
 	})
 
-	t.Run("FMap", func(t *testing.T) {
-		reply := &chatter.Reply{
-			Content: []chatter.Content{
-				chatter.ContentText{Text: "TOOL:return <codeblock>hello world</codeblock>\n"},
-			},
-		}
-		conf, out, err := r.Decode(reply)
-
-		it.Then(t).Should(
-			it.Nil(err),
-			it.Equal(conf, 1.0),
-			it.Equal(out.Cmd, "return"),
-			it.Equal(out.Output, "hello world"),
-		)
-	})
-
-	t.Run("FMapNoTool", func(t *testing.T) {
-		reply := &chatter.Reply{
-			Content: []chatter.Content{
-				chatter.ContentText{Text: "TOOL:foo\n"},
-			},
-		}
-		conf, _, err := r.Decode(reply)
-
-		it.Then(t).ShouldNot(
-			it.Nil(err),
-		)
-
-		it.Then(t).Should(
-			it.Equal(conf, 0.0),
-			it.String(err.Error()).Contain("The output does not contain valid reference to the tool."),
-		)
-	})
 }

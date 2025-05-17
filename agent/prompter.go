@@ -17,10 +17,10 @@ import (
 
 // Prompter is memoryless and stateless agent, implementing request/response to LLMs.
 type Prompter[A any] struct {
-	*Automata[A, string]
+	*Automata[A, *chatter.Reply]
 }
 
-func NewPrompter[A any](llm chatter.Chatter, f func(A) (*chatter.Prompt, error)) *Prompter[A] {
+func NewPrompter[A any](llm chatter.Chatter, f func(A) (chatter.Message, error)) *Prompter[A] {
 	w := &Prompter[A]{}
 	w.Automata = NewAutomata(
 		llm,
@@ -41,7 +41,7 @@ func NewPrompter[A any](llm chatter.Chatter, f func(A) (*chatter.Prompt, error))
 		// Configures the reasoner, which determines the agent's next actions and prompts.
 		// Here, we use a void reasoner, meaning no reasoning is performed—the agent
 		// simply returns the result.
-		reasoner.NewVoid[string](),
+		reasoner.NewVoid[*chatter.Reply](),
 	)
 
 	return w
