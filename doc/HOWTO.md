@@ -11,10 +11,10 @@ The library uses [`chatter`](github.com/kshard/chatter) as an adapter to access 
 * [OpenAI](https://platform.openai.com/docs/api-reference/introduction)
 * [LM Studio](https://lmstudio.ai)  
 
-Once the provider and LLMs access is configures, your application can start using it. The [`autoconfig`](github.com/kshard/chatter/llm/autoconfig) is recommended approach to begin with. It does not require any specification within Golang code.
+Once the provider and LLMs access is configures, your application can start using it. The [`autoconfig`](github.com/kshard/chatter/provider/autoconfig) is recommended approach to begin with. It does not require any specification within Golang code.
 
 ```go
-import "github.com/kshard/chatter/llm/autoconfig"
+import "github.com/kshard/chatter/provider/autoconfig"
 
 llm, err := autoconfig.New("thinker")
 if err != nil {

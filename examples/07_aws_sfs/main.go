@@ -10,13 +10,12 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awsbedrock"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/fogfish/scud"
 	"github.com/fogfish/typestep"
-	"github.com/kshard/chatter/llm/bedrock"
+	"github.com/kshard/chatter/provider/bedrock/iam"
 	"github.com/kshard/thinker/examples/07_aws_sfs/core"
 )
 
@@ -24,8 +23,8 @@ func main() {
 	app := awscdk.NewApp(nil)
 	stack := awscdk.NewStack(app, jsii.String("example-aws-thinker"), nil)
 
-	llm := bedrock.NewFoundationModel(stack, jsii.String("LLM"),
-		awsbedrock.FoundationModelIdentifier_META_LLAMA_3_1_70_INSTRUCT_V1(),
+	fm := iam.NewInferenceProfile(stack, jsii.String("InferenceProfile"),
+		jsii.String("us.anthropic.claude-3-7-sonnet-20250219-v1:0"),
 	)
 
 	input := awsevents.NewEventBus(stack, jsii.String("Input"),
@@ -46,7 +45,7 @@ func main() {
 			SourceCodeLambda: "07_aws_sfs/cmd/ingest",
 		},
 	)
-	llm.GrantAccessIn(ingest, jsii.String("us-west-2"))
+	fm.GrantAccessIn(ingest, jsii.String("us-west-2"))
 
 	classify := scud.NewFunctionGo(stack, jsii.String("Classify"),
 		&scud.FunctionGoProps{
@@ -54,7 +53,7 @@ func main() {
 			SourceCodeLambda: "07_aws_sfs/cmd/classify",
 		},
 	)
-	llm.GrantAccessIn(classify, jsii.String("us-west-2"))
+	fm.GrantAccessIn(classify, jsii.String("us-west-2"))
 
 	insight := scud.NewFunctionGo(stack, jsii.String("Insight"),
 		&scud.FunctionGoProps{
@@ -62,7 +61,7 @@ func main() {
 			SourceCodeLambda: "07_aws_sfs/cmd/insight",
 		},
 	)
-	llm.GrantAccessIn(insight, jsii.String("us-west-2"))
+	fm.GrantAccessIn(insight, jsii.String("us-west-2"))
 
 	a := typestep.From[core.Document](input)
 	b := typestep.Join(new(core.Ingestor).Ingest, ingest, a)

@@ -15,7 +15,7 @@ import (
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/aio"
-	"github.com/kshard/chatter/llm/autoconfig"
+	"github.com/kshard/chatter/provider/autoconfig"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
@@ -82,7 +82,7 @@ func main() {
 	registry.Register(softcmd.Return())
 
 	// create instance of LLM API, see doc/HOWTO.md for details
-	llm, err := autoconfig.New("thinker")
+	llm, err := autoconfig.FromNetRC("thinker")
 	if err != nil {
 		panic(err)
 	}

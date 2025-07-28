@@ -11,11 +11,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/fogfish/stream/lfs"
 	"github.com/fogfish/stream/spool"
 	"github.com/kshard/chatter"
-	"github.com/kshard/chatter/llm/autoconfig"
+	"github.com/kshard/chatter/provider/autoconfig"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/agent/worker"
 	"github.com/kshard/thinker/codec"
@@ -40,7 +41,7 @@ func processor(s string) (chatter.Message, error) {
 }
 
 func main() {
-	llm, err := autoconfig.New("thinker")
+	llm, err := autoconfig.FromNetRC("thinker")
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +56,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	q := spool.New(r, w, spool.Mutable)
+	q := spool.New(r, w, spool.IsMutable)
 
 	// We need 10 files, let's use agents to get itls
 	fmt.Printf("==> creating files ...\n")
@@ -70,14 +71,26 @@ func main() {
 	wrk := agent.NewPrompter(llm, processor)
 
 	fmt.Printf("==> processing files ...\n")
-	q.ForEachFile(context.Background(), "/",
-		func(ctx context.Context, path string, txt []byte) ([]byte, error) {
+	q.ForEach(context.Background(), "/",
+		func(ctx context.Context, path string, r io.Reader, w io.Writer) error {
 			fmt.Printf("==> %v ...\n", path)
+
+			txt, err := io.ReadAll(r)
+			if err != nil {
+				return err
+			}
+
 			kwd, err := wrk.PromptOnce(ctx, string(txt))
 			if err != nil {
-				return nil, err
+				return err
 			}
-			return []byte(kwd.String()), nil
+
+			_, err = w.Write([]byte(kwd.String()))
+			if err != nil {
+				return err
+			}
+
+			return nil
 		},
 	)
 }
