@@ -10,14 +10,14 @@ package main
 
 import (
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/kshard/chatter/llm/bedrock"
+	"github.com/kshard/chatter/provider/bedrock/foundation/converse"
 	"github.com/kshard/thinker/examples/07_aws_sfs/core"
 )
 
 func main() {
-	llm, err := bedrock.New(
-		bedrock.WithLLM(bedrock.LLAMA3_1_70B_INSTRUCT),
-		bedrock.WithRegion("us-west-2"),
+	llm, err := converse.New(
+		"us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+		converse.WithRegion("us-west-2"),
 	)
 	if err != nil {
 		panic(err)

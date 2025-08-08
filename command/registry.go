@@ -104,7 +104,7 @@ func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message,
 		return thinker.AGENT_RETURN, nil, nil
 	}
 
-	return thinker.AGENT_ASK, answer, nil
+	return thinker.AGENT_ASK, &answer, nil
 }
 
 func convert(cmd thinker.Cmd) (chatter.Cmd, error) {

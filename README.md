@@ -90,7 +90,7 @@ import (
 
   // LLMs toolkit
   "github.com/kshard/chatter"
-  "github.com/kshard/chatter/llm/autoconfig"
+  "github.com/kshard/chatter/provider/autoconfig"
 
   // Agents toolkit
   "github.com/kshard/thinker/agent"
