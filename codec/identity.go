@@ -25,3 +25,10 @@ var DecoderID = FromDecoder(
 		return 1.0, reply, nil
 	},
 )
+
+// Identity decoder, passes LLM reply as string object
+var DecoderString = FromDecoder(
+	func(reply *chatter.Reply) (float64, string, error) {
+		return 1.0, reply.String(), nil
+	},
+)

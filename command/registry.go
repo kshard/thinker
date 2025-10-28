@@ -6,133 +6,209 @@
 // https://github.com/kshard/thinker
 //
 
+// Package command implements a registry for Model Context Protocol (MCP) servers.
+// It provides integration with MCP tools, allowing agents to dynamically discover
+// and invoke tools exposed by MCP servers.
 package command
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"sync"
+	"strings"
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// MCP Server interface
+type Server interface {
+	ListTools(ctx context.Context, params *mcp.ListToolsParams) (*mcp.ListToolsResult, error)
+	CallTool(ctx context.Context, params *mcp.CallToolParams) (*mcp.CallToolResult, error)
+	Close() error
+}
+
+const kSchemaSplit = "_"
+
 type Registry struct {
-	mu       sync.Mutex
-	registry map[string]thinker.Cmd
-	cmds     chatter.Registry
+	servers map[string]Server
+	cmds    chatter.Registry
 }
 
 var _ thinker.Registry = (*Registry)(nil)
 
+// NewRegistry creates a new registry of MCP servers.
 func NewRegistry() *Registry {
-	r := &Registry{
-		registry: make(map[string]thinker.Cmd),
-		cmds:     chatter.Registry{},
+	return &Registry{
+		servers: make(map[string]Server),
+		cmds:    chatter.Registry{},
 	}
-	r.Register(Return())
-	return r
 }
 
-// Register new command
-func (r *Registry) Register(cmd thinker.Cmd) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, has := r.registry[cmd.Cmd]; has {
-		return thinker.ErrCmdConflict
+// Attach adds an MCP server to the registry with the given namespace prefix.
+// The name parameter serves as a namespace prefix for all tools from this server.
+// If name is empty, tools are registered without a prefix.
+// If name is provided (e.g., "fs"), tools are prefixed using compact IRI notation (e.g., "fs:read", "fs:write").
+func (r *Registry) Attach(id string, server Server) error {
+	if id == "" {
+		return fmt.Errorf("server ID cannot be empty")
 	}
 
-	if !cmd.IsValid() {
-		return thinker.ErrCmdInvalid
-	}
+	r.servers[id] = server
+	r.cmds = chatter.Registry{}
 
-	c, err := convert(cmd)
-	if err != nil {
-		return thinker.ErrCmdInvalid
-	}
-
-	r.registry[cmd.Cmd] = cmd
-	r.cmds = append(r.cmds, c)
 	return nil
 }
 
-func (r *Registry) Context() chatter.Registry { return r.cmds }
+// Context returns the registry as LLM embeddable schema.
+// It fetches the list of available tools from all attached MCP servers.
+func (r *Registry) Context() chatter.Registry {
+	// Return cached if available
+	if len(r.cmds) > 0 {
+		return r.cmds
+	}
 
+	ctx := context.Background()
+	seq := make([]chatter.Cmd, 0)
+
+	// Collect tools from all attached servers
+	for id, srv := range r.servers {
+		tools, err := srv.ListTools(ctx, &mcp.ListToolsParams{})
+		if err != nil {
+			continue
+		}
+
+		for _, tool := range tools.Tools {
+			cmd := convertTool(*tool, id)
+			seq = append(seq, cmd)
+		}
+	}
+
+	r.cmds = seq
+	return r.cmds
+}
+
+// Invoke executes the tools requested by the LLM via the appropriate MCP server.
 func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message, error) {
-	var hasReturn = false
-
+	ctx := context.Background()
 	answer, err := reply.Invoke(func(name string, args json.RawMessage) (json.RawMessage, error) {
-		cmd, has := r.registry[name]
-		if !has {
+		seq := strings.SplitN(name, kSchemaSplit, 2)
+		if len(seq) != 2 {
 			return nil, thinker.Feedback(
-				fmt.Sprintf("the tool %s is unknown to the client.", name),
+				fmt.Sprintf("invalid tool name %s, missing the prefix", name),
+			)
+		}
+		id, tool := seq[0], seq[1]
+
+		// Find which server handles this tool
+		srv, exists := r.servers[id]
+		if !exists {
+			return nil, thinker.Feedback(
+				fmt.Sprintf("tool %s is not available in any attached MCP server", name),
 			)
 		}
 
-		b, err := cmd.Run(args)
-		if err != nil {
-			var feedback chatter.Content
-			if ok := errors.As(err, &feedback); !ok {
-				return nil, err
+		// Unmarshal arguments to pass to MCP
+		var arguments map[string]any
+		if len(args) > 0 {
+			if err := json.Unmarshal(args, &arguments); err != nil {
+				return nil, thinker.Feedback(
+					fmt.Sprintf("failed to parse arguments for tool %s: %v", name, err),
+				)
 			}
-
-			exx := feedback.String()
-			return pack([]byte(exx))
 		}
 
-		if name == RETURN {
-			hasReturn = true
-			return b, nil
+		// Call the tool via MCP using the actual tool name (without prefix)
+		result, err := srv.CallTool(ctx, &mcp.CallToolParams{
+			Name:      tool,
+			Arguments: arguments,
+		})
+		if err != nil {
+			return nil, err
 		}
 
-		return pack(b)
+		// Handle tool execution errors
+		if result.IsError {
+			errorMsg := "tool execution failed"
+			if len(result.Content) > 0 {
+				if text, ok := result.Content[0].(*mcp.TextContent); ok {
+					errorMsg = text.Text
+				}
+			}
+			return nil, thinker.Feedback(errorMsg)
+		}
+
+		// Extract and pack the result
+		output := extractContent(result)
+		return pack(output)
 	})
 
 	if err != nil {
 		return thinker.AGENT_ABORT, nil, err
 	}
 
-	if hasReturn {
-		for _, yield := range answer.Yield {
-			if yield.Source == RETURN {
-				return thinker.AGENT_RETURN, chatter.Text(yield.Value), nil
-			}
-		}
-
-		return thinker.AGENT_RETURN, nil, nil
-	}
-
 	return thinker.AGENT_ASK, &answer, nil
 }
 
-func convert(cmd thinker.Cmd) (chatter.Cmd, error) {
-	required := make([]string, 0)
-	properties := map[string]any{}
-	for _, arg := range cmd.Args {
-		properties[arg.Name] = arg
-		required = append(required, arg.Name)
+// convertTool converts an MCP Tool to a chatter.Cmd format.
+func convertTool(tool mcp.Tool, prefix string) chatter.Cmd {
+	about := tool.Description
+	if about == "" && tool.Title != "" {
+		about = tool.Title
 	}
 
-	schema := map[string]any{
-		"type":       "object",
-		"properties": properties,
-		"required":   required,
+	var schema json.RawMessage
+	if tool.InputSchema != nil {
+		if raw, ok := tool.InputSchema.(json.RawMessage); ok {
+			schema = raw
+		} else {
+			// Convert to JSON if not already RawMessage
+			if b, err := json.Marshal(tool.InputSchema); err == nil {
+				schema = json.RawMessage(b)
+			}
+		}
 	}
 
-	raw, err := json.Marshal(schema)
-	if err != nil {
-		return chatter.Cmd{}, err
+	// Apply prefix if set (compact IRI notation: prefix:tool_name)
+	name := tool.Name
+	if prefix != "" {
+		name = prefix + kSchemaSplit + tool.Name
 	}
 
 	return chatter.Cmd{
-		Cmd:    cmd.Cmd,
-		About:  cmd.About,
-		Schema: raw,
-	}, nil
+		Cmd:    name,
+		About:  about,
+		Schema: schema,
+	}
 }
 
+// extractContent extracts the text content from a CallToolResult.
+func extractContent(result *mcp.CallToolResult) []byte {
+	if len(result.Content) == 0 {
+		return []byte{}
+	}
+
+	// Try to extract text content
+	for _, content := range result.Content {
+		switch c := content.(type) {
+		case *mcp.TextContent:
+			return []byte(c.Text)
+		case *mcp.ImageContent:
+			// For image content, return a description or empty
+			return []byte("[Image content]")
+		}
+	}
+
+	// Fallback: try to marshal the content as JSON
+	if b, err := json.Marshal(result.Content); err == nil {
+		return b
+	}
+
+	return []byte{}
+}
+
+// pack wraps the tool output in the expected format.
 func pack(b []byte) (json.RawMessage, error) {
 	pckt := map[string]any{
 		"toolOutput": string(b),
@@ -144,5 +220,4 @@ func pack(b []byte) (json.RawMessage, error) {
 	}
 
 	return json.RawMessage(bin), nil
-
 }
