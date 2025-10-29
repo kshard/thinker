@@ -46,10 +46,13 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Attach adds an MCP server to the registry with the given namespace prefix.
-// The name parameter serves as a namespace prefix for all tools from this server.
-// If name is empty, tools are registered without a prefix.
-// If name is provided (e.g., "fs"), tools are prefixed using compact IRI notation (e.g., "fs:read", "fs:write").
+// Attach MCP server to the registry, making its tools available to the agent.
+// The server is identified by a unique prefix, which is used to namespace
+// tool names (e.g., fs_read). Tool names use underscore separator (prefix_toolname)
+// due to AWS Bedrock constraints which only allow [a-zA-Z0-9_-] characters.
+// The first token before underscore is always the server prefix.
+// Each server runs independently, and its tools are registered with the prefix
+// to avoid naming conflicts.
 func (r *Registry) Attach(id string, server Server) error {
 	if id == "" {
 		return fmt.Errorf("server ID cannot be empty")
