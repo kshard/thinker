@@ -25,8 +25,8 @@ func TestStrings(t *testing.T) {
 
 		it.Then(t).Should(
 			it.String(str).Contain("Strictly adhere to the following requirements"),
-			it.String(str).Contain("JSON list of strings"),
-			it.String(str).Contain("reply [] if you do not know the answer"),
+			it.String(str).Contain("ALWAYS reply with valid JSON only"),
+			it.String(str).Contain("The JSON must exactly match the schema"),
 		)
 	})
 
@@ -47,7 +47,7 @@ func TestStrings(t *testing.T) {
 
 	t.Run("DecodeErrors", func(t *testing.T) {
 		for in, ex := range map[string]string{
-			"abc":       "does not contain valid JSON list of strings",
+			"abc":       "The output does not contain valid JSON array or object.",
 			"[a, b, c]": "JSON parsing of included list of strings has failed",
 		} {
 			var seq []string

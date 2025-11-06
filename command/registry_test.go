@@ -82,15 +82,15 @@ func TestRegistryContext(t *testing.T) {
 
 		it.Then(t).Should(
 			it.Equal(len(ctx), 2),
-			it.Seq(seq).Contain("fs:read.0", "fs:read.1"),
+			it.Seq(seq).Contain("fs_read.0", "fs_read.1"),
 		)
 	})
 
 	t.Run("ContextMultipleServers", func(t *testing.T) {
 		registry := command.NewRegistry()
 
-		registry.Attach("fs", mockOne("read", "Read file"))
-		registry.Attach("db", mockOne("query", "Query database"))
+		registry.Attach("fs", mockSeq(1, "read", "Read file"))
+		registry.Attach("db", mockSeq(1, "query", "Query database"))
 
 		ctx := registry.Context()
 		seq := make([]string, len(ctx))
@@ -100,7 +100,7 @@ func TestRegistryContext(t *testing.T) {
 
 		it.Then(t).Should(
 			it.Equal(len(ctx), 2),
-			it.Seq(seq).Contain("fs:read", "db:query"),
+			it.Seq(seq).Contain("fs_read.0", "db_query.0"),
 		)
 	})
 }
@@ -112,7 +112,7 @@ func TestRegistryInvoke(t *testing.T) {
 		registry.Attach("fs", mockReply("read", "Read file", "file contents"))
 		registry.Context()
 
-		reply := replyOne("fs:read", map[string]any{"path": "/test.txt"})
+		reply := replyOne("fs_read", map[string]any{"path": "/test.txt"})
 		phase, msg, err := registry.Invoke(&reply)
 
 		it.Then(t).Should(
@@ -166,7 +166,7 @@ func TestRegistryInvoke(t *testing.T) {
 			Stage: chatter.LLM_INVOKE,
 			Content: []chatter.Content{
 				chatter.Invoke{
-					Cmd:  "fs:read",
+					Cmd:  "fs_read",
 					Args: chatter.Json{Value: []byte("invalid json")},
 				},
 			},
