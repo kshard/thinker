@@ -65,7 +65,7 @@ func main() {
 	registry := command.NewRegistry()
 	registry.Attach("os", server())
 
-	init := agent.NewManifold(llm, codec.FromEncoder(bootstrap), codec.DecoderString, registry)
+	init := agent.NewManifold(llm, codec.FromEncoder(bootstrap), codec.String, registry)
 	if _, err = init.Prompt(context.Background(), 13); err != nil {
 		panic(err)
 	}

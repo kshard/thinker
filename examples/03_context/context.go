@@ -88,7 +88,7 @@ func main() {
 	agt := agent.NewManifold(
 		aio.NewJsonLogger(os.Stdout, llm),
 		codec.FromEncoder(encode),
-		codec.DecoderString,
+		codec.String,
 		registry,
 	)
 

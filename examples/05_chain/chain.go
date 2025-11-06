@@ -57,7 +57,7 @@ func NewAgentB(llm chatter.Chatter) *AgentB {
 	agt := &AgentB{}
 	agt.Manifold = agent.NewManifold(llm,
 		thinker.Encoder[string](agt),
-		codec.DecoderString,
+		codec.String,
 		registry,
 	)
 
