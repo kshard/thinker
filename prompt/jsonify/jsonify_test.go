@@ -19,7 +19,7 @@ import (
 func TestStrings(t *testing.T) {
 	t.Run("Harden", func(t *testing.T) {
 		var prompt chatter.Prompt
-		jsonify.Strings.Harden(&prompt)
+		jsonify.Strings.Harden(&prompt, nil)
 
 		str := prompt.String()
 
@@ -37,7 +37,7 @@ func TestStrings(t *testing.T) {
 				chatter.Text(` ["a", "b", "c"] `),
 			},
 		}
-		err := jsonify.Strings.Decode(reply, &seq)
+		err := jsonify.Strings.Decode(reply, nil, &seq)
 
 		it.Then(t).Should(
 			it.Nil(err),
@@ -56,7 +56,7 @@ func TestStrings(t *testing.T) {
 					chatter.Text(in),
 				},
 			}
-			err := jsonify.Strings.Decode(reply, &seq)
+			err := jsonify.Strings.Decode(reply, nil, &seq)
 
 			it.Then(t).Should(
 				it.String(err.Error()).Contain(ex),
