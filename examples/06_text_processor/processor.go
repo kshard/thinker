@@ -9,18 +9,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"os/exec"
 
 	"github.com/fogfish/stream/lfs"
 	"github.com/fogfish/stream/spool"
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/provider/autoconfig"
 	"github.com/kshard/thinker/agent"
-	"github.com/kshard/thinker/agent/worker"
 	"github.com/kshard/thinker/codec"
-	"github.com/kshard/thinker/command/softcmd"
+	"github.com/kshard/thinker/command"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func bootstrap(n int) (chatter.Message, error) {
@@ -60,9 +62,10 @@ func main() {
 
 	// We need 10 files, let's use agents to get itls
 	fmt.Printf("==> creating files ...\n")
-	registry := softcmd.NewRegistry()
-	registry.Register(softcmd.Bash("MacOS", "/tmp/script/txt"))
-	init := worker.NewReflex(llm, 4, codec.FromEncoder(bootstrap), registry)
+	registry := command.NewRegistry()
+	registry.Attach("os", server())
+
+	init := agent.NewManifold(llm, codec.FromEncoder(bootstrap), codec.String, registry)
 	if _, err = init.Prompt(context.Background(), 13); err != nil {
 		panic(err)
 	}
@@ -93,4 +96,46 @@ func main() {
 			return nil
 		},
 	)
+}
+
+//------------------------------------------------------------------------------
+
+func server() *mcp.ClientSession {
+	srv := mcp.NewServer(&mcp.Implementation{Name: "shell", Version: "v1.0.0"}, nil)
+	mcp.AddTool(srv, &mcp.Tool{Name: "bash", Description: "execute bash commands"}, Bash)
+
+	cli := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v1.0.0"}, nil)
+
+	tcli, tsrv := mcp.NewInMemoryTransports()
+	go srv.Run(context.Background(), tsrv)
+
+	session, err := cli.Connect(context.Background(), tcli, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return session
+}
+
+type Input struct {
+	Script string `json:"script" jsonschema:"bash script to executes"`
+}
+
+type Reply struct {
+	Output string `json:"output" jsonschema:"output of bash command"`
+}
+
+func Bash(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, Reply, error) {
+	cmd := exec.Command("bash", "-c", input.Script)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Dir = "/tmp/script/txt"
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, Reply{Output: "bash has failed with an error " + err.Error()}, nil
+	}
+
+	return nil, Reply{Output: stdout.String()}, nil
 }

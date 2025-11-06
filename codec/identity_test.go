@@ -37,3 +37,25 @@ func TestDecoderID(t *testing.T) {
 		it.Equal(text.String(), input),
 	)
 }
+
+func TestEncoderString(t *testing.T) {
+	input := "prompt."
+	prompt, err := codec.String.Encode(input)
+
+	it.Then(t).Should(
+		it.Nil(err),
+		it.Equal(prompt.String(), input),
+	)
+}
+
+func TestDecoderString(t *testing.T) {
+	input := "prompt"
+	reply := &chatter.Reply{Content: []chatter.Content{chatter.Text(input)}}
+	conf, text, err := codec.String.Decode(reply)
+
+	it.Then(t).Should(
+		it.Nil(err),
+		it.Equal(conf, 1.0),
+		it.Equal(text, input),
+	)
+}

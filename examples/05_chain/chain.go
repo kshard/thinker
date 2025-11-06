@@ -9,16 +9,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/provider/autoconfig"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
-	"github.com/kshard/thinker/agent/worker"
-	"github.com/kshard/thinker/command/softcmd"
+	"github.com/kshard/thinker/codec"
+	"github.com/kshard/thinker/command"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 //------------------------------------------------------------------------------
@@ -44,15 +47,19 @@ func (AgentA) story(subj string) (chatter.Message, error) {
 
 // The agent creates workflow to process local files, see Script example for details
 type AgentB struct {
-	*worker.Reflex[string]
+	*agent.Manifold[string, string]
 }
 
 func NewAgentB(llm chatter.Chatter) *AgentB {
-	registry := softcmd.NewRegistry()
-	registry.Register(softcmd.Bash("MacOS", "/tmp/script"))
+	registry := command.NewRegistry()
+	registry.Attach("os", server())
 
 	agt := &AgentB{}
-	agt.Reflex = worker.NewReflex(llm, 4, thinker.Encoder[string](agt), registry)
+	agt.Manifold = agent.NewManifold(llm,
+		thinker.Encoder[string](agt),
+		codec.String,
+		registry,
+	)
 
 	return agt
 }
@@ -98,12 +105,12 @@ func main() {
 	}
 
 	// Use agent to conduct analysis of local files
-	reply, err := agtB.PromptOnce(context.Background(), "")
+	reply, err := agtB.Prompt(context.Background(), "")
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("==> %s\n", reply.Output)
+	fmt.Printf("==> %s\n", reply)
 }
 
 func txt2file(x *chatter.Reply) error {
@@ -116,4 +123,46 @@ func txt2file(x *chatter.Reply) error {
 		return err
 	}
 	return nil
+}
+
+//------------------------------------------------------------------------------
+
+func server() *mcp.ClientSession {
+	srv := mcp.NewServer(&mcp.Implementation{Name: "shell", Version: "v1.0.0"}, nil)
+	mcp.AddTool(srv, &mcp.Tool{Name: "bash", Description: "execute bash commands"}, Bash)
+
+	cli := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v1.0.0"}, nil)
+
+	tcli, tsrv := mcp.NewInMemoryTransports()
+	go srv.Run(context.Background(), tsrv)
+
+	session, err := cli.Connect(context.Background(), tcli, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return session
+}
+
+type Input struct {
+	Script string `json:"script" jsonschema:"bash script to executes"`
+}
+
+type Reply struct {
+	Output string `json:"output" jsonschema:"output of bash command"`
+}
+
+func Bash(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, Reply, error) {
+	cmd := exec.Command("bash", "-c", input.Script)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Dir = "/tmp/script"
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, Reply{Output: "bash has failed with an error " + err.Error()}, nil
+	}
+
+	return nil, Reply{Output: stdout.String()}, nil
 }

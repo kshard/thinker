@@ -17,6 +17,7 @@ require (
 	github.com/kshard/chatter/provider/autoconfig v0.10.0
 	github.com/kshard/chatter/provider/bedrock v0.10.0
 	github.com/kshard/thinker v0.0.0-00010101000000-000000000000
+	github.com/modelcontextprotocol/go-sdk v1.0.0
 )
 
 require (
@@ -59,17 +60,19 @@ require (
 	github.com/fogfish/logger/x/xlog v0.0.1 // indirect
 	github.com/fogfish/opts v0.0.5 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/jsonschema-go v0.3.0 // indirect
 	github.com/jdxcode/netrc v1.0.0 // indirect
 	github.com/kshard/chatter/provider/openai v0.10.0 // indirect
 	github.com/kshard/float8 v0.0.3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/goldmark v1.7.11 // indirect
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067 // indirect
-	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.33.0 // indirect
+	golang.org/x/tools v0.34.0 // indirect
 )

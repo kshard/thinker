@@ -64,8 +64,7 @@ In this library, an agent is defined as a side-effect function `ƒ: A ⟼ B`, wh
   - [Memory](#memory)
   - [Reasoner](#reasoner)
   - [Encoder \& Decoder](#encoder--decoder)
-  - [Commands \& Tools](#commands--tools)
-  - [Agent profiles](#agent-profiles)
+  - [Commands, Tools and MCP Servers](#commands-tools-and-mcp-servers)
 - [Agent composition (chaining)](#agent-composition-chaining)
 - [FAQ](#faq)
 - [How To Contribute](#how-to-contribute)
@@ -79,7 +78,7 @@ Running the examples you need access either to AWS Bedrock or OpenAI.
 
 ## Quick example
 
-See ["Hello World"](./examples/helloworld/hw.go) application as the quick start. The example agent is `ƒ: string ⟼ string` that takes the sentence and returns the anagram. [HowTo](./doc/HOWTO.md) gives support to bootstrap it. The library ships more [examples](./examples/) to demonstrate library's capabilities.
+See ["Hello World"](./examples/01_helloworld/helloworld.go) application as the quick start. The example agent is `ƒ: string ⟼ string` that takes the sentence and returns the anagram. [HowTo](./doc/HOWTO.md) gives support to bootstrap it. The library ships more [examples](./examples/) to demonstrate library's capabilities.
 
 ```go
 package main
@@ -99,24 +98,20 @@ import (
 // This function is core in the example. It takes input (the sentence)
 // and generate prompt function that guides LLMs on how to create anagram.
 func anagram(expr string) (prompt chatter.Prompt, err error) {
-  prompt.
-    WithTask("Create anagram using the phrase: %s", expr).
-    With(
-      // instruct LLM about anagram generation
-      chatter.Rules(
-        "Strictly adhere to the following requirements when generating a response.",
-        "The output must be the resulting anagram only.",
-      ),
-    ).
-    With(
-      // Gives the example of input and expected output
-      chatter.Example{
-        Input: "Madam Curie",
-        Reply: "Radium came",
-      },
-    )
+  var prompt chatter.Prompt
 
-  return
+  prompt.WithTask("Create anagram using the phrase: %s", expr)
+
+  // instruct LLM about anagram generation
+  prompt.WithRules(
+    "Strictly adhere to the following requirements when generating a response.",
+    "The output must be the resulting anagram only.",
+  )
+
+  // Gives the example of input and expected output
+  prompt.WithExample("Madam Curie", "Radium came")
+
+  return &prompt, nil
 }
 
 func main() {
@@ -184,7 +179,7 @@ graph TD
     B[Type B]
     end
     subgraph Commands
-    C[Command]
+    C[MCP Server]
     end
     subgraph Agent
     A --"01|input"--> E[Encoder]
@@ -212,7 +207,7 @@ graph TD
     S[Stream]
     end
     subgraph Commands
-    C[Command]
+    C[MCP Server]
     end
     subgraph Agent
     A --"01|input"--> E[Encoder]
@@ -253,7 +248,7 @@ agent.NewAutomata(
 )
 ```
 
-The [rainbow example](./examples/rainbow/rainbow.go) demonstrates a simple agent that effectively utilizes the depicted agent architecture to solve a task.
+The [rainbow example](./examples/02_rainbow/rainbow.go) demonstrates a simple agent that effectively utilizes the depicted agent architecture to solve a task.
 
 ### Memory
 
@@ -316,25 +311,19 @@ codec.FromEncoder(encoder)
 codec.FromDecoder(decoder)
 ```
 
-### Commands & Tools
+### Commands, Tools and MCP Servers
 
-The `thinker` library enables the integration of external [tools and commands](./command.go) into the agent workflow. By design, a command is a function `Decoder[CmdOut]` that takes input from the LLM, executes it, validates and returns the output and any possible feedback - similary as you implement basic decoder.
+The `thinker` library enables the integration of external [tools and commands](./command.go) into the agent workflow. The library support only [Model-Context-Protocol](https://modelcontextprotocol.io/specification/2025-06-18) using [the official Golang SDK](https://github.com/modelcontextprotocol/go-sdk). By design the commands are only exposed through [a registry](./command/registry.go). The registry is built-in into **manifold** but requires to be implemented within `Decoder` in the case of **automata**. The registry takes input from the LLM `chatter.Reply`, serializes into MCP request, delegates execution to server, validates output and returns the result or any possible feedback - similary as you implement basic decoder.
 
-When constructing a prompt, it is essential to include a section that "advertises" the available commands and the rules for using them. There is [a registry](./command/registry.go) that automates prompting and parsing of the response.
+The [context example](./examples/03_context/context.go) demonstrates a simple usage of Model-Context-Protocol. The library does not implement any MCP servers but allows usage of [the official Golang SDK](https://github.com/modelcontextprotocol/go-sdk) as-is.
 
-The [script example](./examples/script/script.go) demonstrates a simple agent that utilizes `bash` to generate and modify files on the local filesystem.
-
-The following commands are supported
-* *bash* execute bash script or single command
-* *golang* execute golang code block
-* *python* execute python code block
-
+<!--
 ### Agent profiles
 
 The application assembles agents from three elements: memory, reasoner and codecs. To simplfy the development, there are few built-in profiles that configures it:
 * `Prompter` is ask-reply from LLM;
 * `Worker` uses LLMs and external tools to solve the task. 
-
+-->
 
 ## Agent composition (chaining)
 
@@ -342,7 +331,9 @@ The `thinker` library does not provide built-in mechanisms for chaining agents. 
 
 The ["Chain" example](./examples/05_chain/chain.go) demonstrates off-the-shelf techniques for agents chaining.
 
-The ["Text Processor" example](./06_text_processor/processor.go) demonstrates chaining agnet with file system I/O.
+The ["Text Processor" example](./examples/06_text_processor/processor.go) demonstrates chaining of agents with file system I/O.
+
+The [AWS StepFunction example](./examples/07_aws_sfs/main.go) demonstrates chaining of agents using the AWS StepFunctions
 
 ## FAQ
 

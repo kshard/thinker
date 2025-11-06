@@ -66,7 +66,7 @@ func (w *Jsonify[A]) encode(in A) (chatter.Message, error) {
 
 	switch v := prompt.(type) {
 	case *chatter.Prompt:
-		jsonify.Strings.Harden(v)
+		jsonify.Strings.Harden(v, nil)
 	}
 
 	return prompt, nil
@@ -74,7 +74,7 @@ func (w *Jsonify[A]) encode(in A) (chatter.Message, error) {
 
 func (w *Jsonify[A]) decode(reply *chatter.Reply) (float64, []string, error) {
 	var seq []string
-	if err := jsonify.Strings.Decode(reply, &seq); err != nil {
+	if err := jsonify.Strings.Decode(reply, nil, &seq); err != nil {
 		return 0.0, nil, err
 	}
 
