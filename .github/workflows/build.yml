@@ -35,11 +35,22 @@ jobs:
         with:
           path-to-profile: profile.cov
 
+      - name: Determine version increment type
+        id: increment
+        run: |
+          if [[ "${{ github.event.head_commit.message }}" == *"[X.y.z]"* ]]; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.head_commit.message }}" == *"[x.Y.z]"* ]]; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
       - uses: reecetech/version-increment@2023.10.2
         id: version
         with:
           scheme: semver
-          increment: patch
+          increment: ${{ steps.increment.outputs.type }}
 
       - name: publish
         run: |
