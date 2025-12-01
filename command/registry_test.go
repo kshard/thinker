@@ -131,10 +131,9 @@ func TestRegistryInvoke(t *testing.T) {
 		reply := replyOne("tool", map[string]any{})
 		phase, _, err := registry.Invoke(&reply)
 
-		it.Then(t).ShouldNot(
+		it.Then(t).Should(
 			it.Nil(err),
-		).Should(
-			it.Equal(phase, thinker.AGENT_ABORT),
+			it.Equal(phase, thinker.AGENT_ASK),
 		)
 	})
 
@@ -148,10 +147,9 @@ func TestRegistryInvoke(t *testing.T) {
 
 		phase, _, err := registry.Invoke(&reply)
 
-		it.Then(t).ShouldNot(
+		it.Then(t).Should(
 			it.Nil(err),
-		).Should(
-			it.Equal(phase, thinker.AGENT_ABORT),
+			it.Equal(phase, thinker.AGENT_ASK),
 		)
 	})
 
@@ -174,10 +172,9 @@ func TestRegistryInvoke(t *testing.T) {
 
 		phase, _, err := registry.Invoke(&reply)
 
-		it.Then(t).ShouldNot(
+		it.Then(t).Should(
 			it.Nil(err),
-		).Should(
-			it.Equal(phase, thinker.AGENT_ABORT),
+			it.Equal(phase, thinker.AGENT_ASK),
 		)
 	})
 }

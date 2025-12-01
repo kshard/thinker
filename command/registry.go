@@ -98,8 +98,8 @@ func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message,
 	answer, err := reply.Invoke(func(name string, args json.RawMessage) (json.RawMessage, error) {
 		seq := strings.SplitN(name, kSchemaSplit, 2)
 		if len(seq) != 2 {
-			return nil, thinker.Feedback(
-				fmt.Sprintf("invalid tool name %s, missing the prefix", name),
+			return pack(
+				fmt.Appendf(nil, "invalid tool name %s, missing the prefix", name),
 			)
 		}
 		id, tool := seq[0], seq[1]
@@ -107,8 +107,8 @@ func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message,
 		// Find which server handles this tool
 		srv, exists := r.servers[id]
 		if !exists {
-			return nil, thinker.Feedback(
-				fmt.Sprintf("tool %s is not available in any attached MCP server", name),
+			return pack(
+				fmt.Appendf(nil, "tool %s is not available in any attached MCP server", name),
 			)
 		}
 
@@ -116,8 +116,8 @@ func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message,
 		var arguments map[string]any
 		if len(args) > 0 {
 			if err := json.Unmarshal(args, &arguments); err != nil {
-				return nil, thinker.Feedback(
-					fmt.Sprintf("failed to parse arguments for tool %s: %v", name, err),
+				return pack(
+					fmt.Appendf(nil, "failed to parse arguments for tool %s: %v", name, err),
 				)
 			}
 		}
@@ -128,7 +128,9 @@ func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message,
 			Arguments: arguments,
 		})
 		if err != nil {
-			return nil, err
+			return pack(
+				fmt.Appendf(nil, "the tool %s execution is failed: %s", name, err),
+			)
 		}
 
 		// Handle tool execution errors
@@ -139,7 +141,7 @@ func (r *Registry) Invoke(reply *chatter.Reply) (thinker.Phase, chatter.Message,
 					errorMsg = text.Text
 				}
 			}
-			return nil, thinker.Feedback(errorMsg)
+			return pack([]byte(errorMsg))
 		}
 
 		// Extract and pack the result
