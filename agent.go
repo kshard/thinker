@@ -9,7 +9,11 @@
 package thinker
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/kshard/chatter"
+	"github.com/kshard/chatter/provider/autoconfig"
 )
 
 // Execution phase of the agent
@@ -44,4 +48,52 @@ type State[B any] struct {
 
 	// Feedback to LLM
 	Feedback chatter.Content
+}
+
+// LLMs configurations availabe to agents
+type LLM struct {
+	Base   chatter.Chatter
+	Micro  chatter.Chatter
+	Small  chatter.Chatter
+	Medium chatter.Chatter
+	Large  chatter.Chatter
+	XLarge chatter.Chatter
+}
+
+func ConfigLLM(rc string) LLM {
+	var (
+		llm LLM
+		err error
+	)
+
+	if llm.Base, err = autoconfig.FromFile(rc, "base"); err != nil {
+		panic(fmt.Errorf("unable to config base llm: %w", err))
+	}
+
+	if llm.Micro, err = autoconfig.FromFile(rc, "micro"); err != nil {
+		slog.Warn("unable to config micro llm", "error", err)
+		llm.Micro = llm.Base
+	}
+
+	if llm.Small, err = autoconfig.FromFile(rc, "small"); err != nil {
+		slog.Warn("unable to config small llm", "error", err)
+		llm.Small = llm.Base
+	}
+
+	if llm.Medium, err = autoconfig.FromFile(rc, "medium"); err != nil {
+		slog.Warn("unable to config medium llm", "error", err)
+		llm.Medium = llm.Base
+	}
+
+	if llm.Large, err = autoconfig.FromFile(rc, "large"); err != nil {
+		slog.Warn("unable to config large llm", "error", err)
+		llm.Large = llm.Base
+	}
+
+	if llm.XLarge, err = autoconfig.FromFile(rc, "xlarge"); err != nil {
+		slog.Warn("unable to config xlarge llm", "error", err)
+		llm.XLarge = llm.Base
+	}
+
+	return llm
 }
