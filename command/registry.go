@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/kshard/chatter"
@@ -44,6 +45,46 @@ func NewRegistry() *Registry {
 		servers: make(map[string]Server),
 		cmds:    chatter.Registry{},
 	}
+}
+
+func (r *Registry) ConnectUrl(id string, url string) error {
+	// TODO: implement connection closing
+	rpc, err := NewAuthTransport(AuthConfig{Endpoint: url})
+	if err != nil {
+		return err
+	}
+
+	cli := mcp.NewClient(&mcp.Implementation{Name: id}, nil)
+	api, err := cli.Connect(context.Background(), rpc, nil)
+	if err != nil {
+		return err
+	}
+
+	err = r.Attach(id, api)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Registry) ConnectCmd(id string, cmd []string) error {
+	// TODO: implement connection closing
+
+	run := exec.Command(cmd[0], cmd[1:]...)
+	rpc := &mcp.CommandTransport{Command: run}
+	cli := mcp.NewClient(&mcp.Implementation{Name: id}, nil)
+	api, err := cli.Connect(context.Background(), rpc, nil)
+	if err != nil {
+		return err
+	}
+
+	err = r.Attach(id, api)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Attach MCP server to the registry, making its tools available to the agent.

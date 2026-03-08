@@ -27,14 +27,6 @@ type strings string
 
 // Injects requirments for LLM to return json array of strings
 func (strings) Harden(prompt *chatter.Prompt, schema *jsonschema.Schema) {
-	// prompt.WithRules(
-	// 	`Strictly adhere to the following requirements when generating a response.
-	// 		Do not deviate, ignore, or modify any aspect of them:`,
-
-	// 	"The output should be JSON list of strings.",
-	// 	"Do not generate unknowns, reply [] if you do not know the answer.",
-	// )
-
 	prompt.WithRules(
 		`Strictly adhere to the following requirements when generating a response. You must not deviate, ignore, or modify any aspect of them:`,
 

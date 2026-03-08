@@ -21,6 +21,67 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+func TestRegistryConnectCmd(t *testing.T) {
+	t.Run("NonExistentBinary", func(t *testing.T) {
+		registry := command.NewRegistry()
+
+		err := registry.ConnectCmd("fs", []string{"nonexistent-binary-xyz-thinker"})
+
+		it.Then(t).ShouldNot(
+			it.Nil(err),
+		)
+	})
+
+	t.Run("BinaryDoesNotSpeakMCP", func(t *testing.T) {
+		registry := command.NewRegistry()
+
+		// /usr/bin/true exits immediately without speaking MCP
+		err := registry.ConnectCmd("fs", []string{"/usr/bin/true"})
+
+		it.Then(t).ShouldNot(
+			it.Nil(err),
+		)
+	})
+
+	t.Run("EmptyID", func(t *testing.T) {
+		registry := command.NewRegistry()
+
+		// Tools are not discovered before Attach validates the id, so the
+		// connection error from the non-MCP binary is hit first.  Either way,
+		// a non-nil error must be returned.
+		err := registry.ConnectCmd("", []string{"/usr/bin/true"})
+
+		it.Then(t).ShouldNot(
+			it.Nil(err),
+		)
+	})
+}
+
+func TestRegistryConnectUrl(t *testing.T) {
+	t.Run("ConnectionRefused", func(t *testing.T) {
+		registry := command.NewRegistry()
+
+		// Nothing is listening on this port; the MCP client must return an error.
+		err := registry.ConnectUrl("remote", "http://127.0.0.1:19999/mcp")
+
+		it.Then(t).ShouldNot(
+			it.Nil(err),
+		)
+	})
+
+	t.Run("EmptyID", func(t *testing.T) {
+		registry := command.NewRegistry()
+
+		// Connect will fail (connection refused) before Attach validates the id.
+		// Either way, a non-nil error must be returned.
+		err := registry.ConnectUrl("", "http://127.0.0.1:19999/mcp")
+
+		it.Then(t).ShouldNot(
+			it.Nil(err),
+		)
+	})
+}
+
 func TestNewRegistry(t *testing.T) {
 	registry := command.NewRegistry()
 
