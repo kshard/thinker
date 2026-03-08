@@ -244,7 +244,7 @@ func TestNanoBot_TextFormat(t *testing.T) {
 			it.Nil(err),
 		)
 		it.Then(t).Should(
-			it.String(err.Error()).Contain("type is not supported"),
+			it.String(err.Error()).Contain("nanobot unable to handle type"),
 		)
 	})
 }
