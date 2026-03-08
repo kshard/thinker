@@ -119,7 +119,7 @@ func (bot *NanoBot[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 		out := new(B)
 
 		switch v := any(out).(type) {
-		case string:
+		case *string:
 			return 1.0, any(reply.String()).(B), nil
 		case encoding.TextUnmarshaler:
 			if err := v.UnmarshalText([]byte(reply.String())); err != nil {
@@ -127,7 +127,7 @@ func (bot *NanoBot[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 			}
 			return 1.0, *out, nil
 		default:
-			return 0.0, *out, fmt.Errorf("type is not supported")
+			return 0.0, *out, fmt.Errorf("nanobot unable to handle type: %T as string", out)
 		}
 	}
 
