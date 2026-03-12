@@ -11,6 +11,7 @@ package thinker
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/provider/autoconfig"
@@ -58,6 +59,105 @@ type LLM struct {
 	Medium chatter.Chatter
 	Large  chatter.Chatter
 	XLarge chatter.Chatter
+}
+
+func (llm LLM) Usage() string {
+	accinput, accreply := 0, 0
+
+	if llm.Micro != nil {
+		input, reply := llm.Micro.Usage().InputTokens, llm.Micro.Usage().ReplyTokens
+		accinput += input
+		accreply += reply
+	}
+
+	if llm.Small != nil {
+		input, reply := llm.Small.Usage().InputTokens, llm.Small.Usage().ReplyTokens
+		accinput += input
+		accreply += reply
+	}
+
+	if llm.Medium != nil {
+		input, reply := llm.Medium.Usage().InputTokens, llm.Medium.Usage().ReplyTokens
+		accinput += input
+		accreply += reply
+	}
+
+	if llm.Large != nil {
+		input, reply := llm.Large.Usage().InputTokens, llm.Large.Usage().ReplyTokens
+		accinput += input
+		accreply += reply
+	}
+
+	if llm.XLarge != nil {
+		input, reply := llm.XLarge.Usage().InputTokens, llm.XLarge.Usage().ReplyTokens
+		accinput += input
+		accreply += reply
+	}
+
+	if llm.Base != nil {
+		input, reply := llm.Base.Usage().InputTokens, llm.Base.Usage().ReplyTokens
+		accinput += input
+		accreply += reply
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	fmt.Fprintf(&sb, "Usage: %s (input: %s | output: %s)\n", fmtInt(accinput+accreply), fmtInt(accinput), fmtInt(accreply))
+
+	if llm.Micro != nil {
+		input, reply := llm.Micro.Usage().InputTokens, llm.Micro.Usage().ReplyTokens
+		if input+reply > 0 {
+			fmt.Fprintf(&sb, " - micro: %s (input: %s | output: %s)\n", fmtInt(input+reply), fmtInt(input), fmtInt(reply))
+		}
+	}
+
+	if llm.Small != nil {
+		input, reply := llm.Small.Usage().InputTokens, llm.Small.Usage().ReplyTokens
+		if input+reply > 0 {
+			fmt.Fprintf(&sb, " - small: %s (input: %s | output: %s)\n", fmtInt(input+reply), fmtInt(input), fmtInt(reply))
+		}
+	}
+
+	if llm.Medium != nil {
+		input, reply := llm.Medium.Usage().InputTokens, llm.Medium.Usage().ReplyTokens
+		if input+reply > 0 {
+			fmt.Fprintf(&sb, " - medium: %s (input: %s | output: %s)\n", fmtInt(input+reply), fmtInt(input), fmtInt(reply))
+		}
+	}
+
+	if llm.Large != nil {
+		input, reply := llm.Large.Usage().InputTokens, llm.Large.Usage().ReplyTokens
+		if input+reply > 0 {
+			fmt.Fprintf(&sb, " - large: %s (input: %s | output: %s)\n", fmtInt(input+reply), fmtInt(input), fmtInt(reply))
+		}
+	}
+
+	if llm.XLarge != nil {
+		input, reply := llm.XLarge.Usage().InputTokens, llm.XLarge.Usage().ReplyTokens
+		if input+reply > 0 {
+			fmt.Fprintf(&sb, " - xlarge: %s (input: %s | output: %s)\n", fmtInt(input+reply), fmtInt(input), fmtInt(reply))
+		}
+	}
+
+	if llm.Base != nil {
+		input, reply := llm.Base.Usage().InputTokens, llm.Base.Usage().ReplyTokens
+		if input+reply > 0 {
+			fmt.Fprintf(&sb, " - base: %s (input: %s | output: %s)\n", fmtInt(input+reply), fmtInt(input), fmtInt(reply))
+		}
+	}
+	fmt.Fprintf(&sb, "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+
+	return sb.String()
+}
+
+func fmtInt(n int) string {
+	if n >= 1000000 {
+		return fmt.Sprintf("%.1fM", float64(n)/1000000)
+	}
+	if n >= 1000 {
+		return fmt.Sprintf("%.1fK", float64(n)/1000)
+	}
+	return fmt.Sprintf("%d", n)
 }
 
 func ConfigLLM(rc string) LLM {
