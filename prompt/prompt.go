@@ -92,25 +92,20 @@ func Parse(r io.Reader) (*Prompt, error) {
 		return &Prompt{Prompt: string(data)}, nil
 	}
 
-	parts := bytes.Split(data[len(div):], []byte(div))
-
-	switch len(parts) {
+	parts := bytes.SplitN(data[len(div):], []byte(div), 2)
 
 	// Only starting delimiter, no ending delimiter - treat as pure prompt
-	case 1:
+	if len(parts) == 1 {
 		return &Prompt{Prompt: string(parts[0])}, nil
+	}
 
 	// Has frontmatter and prompt
-	case 2:
-		var raw yamlPrompt
-		if err := yaml.Unmarshal(parts[0], &raw); err != nil {
-			return nil, fmt.Errorf("failed to parse frontmatter: %w", err)
-		}
-
-		return toPrompt(&raw, string(parts[1])), nil
-	default:
-		return nil, fmt.Errorf("invalid prompt format, expected at most two '---' dividers")
+	var raw yamlPrompt
+	if err := yaml.Unmarshal(parts[0], &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse frontmatter: %w", err)
 	}
+
+	return toPrompt(&raw, string(parts[1])), nil
 }
 
 func toPrompt(raw *yamlPrompt, prompt string) *Prompt {
