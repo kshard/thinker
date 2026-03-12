@@ -49,8 +49,10 @@ func TestParseOnlyOpenDelimiter(t *testing.T) {
 func TestParseTooManyDelimiters(t *testing.T) {
 	const text = "---\nfoo: bar\n---\nprompt text\n---\nextra section\n"
 
+	p, err := prompt.Parse(strings.NewReader(text))
 	it.Then(t).Should(
-		it.Error(prompt.Parse(strings.NewReader(text))),
+		it.Nil(err),
+		it.String(p.Prompt).Contain("prompt text"),
 	)
 }
 
