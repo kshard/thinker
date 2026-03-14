@@ -368,19 +368,19 @@ func TestNanoBot_InputValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("InvalidInput", func(t *testing.T) {
-		mock := &MockFixed{response: `{"items":[]}`}
-		llm := thinker.LLM{Base: mock}
-		bot, err := agent.NewNanoBot[map[string]any, JSONOut](llm, nanobotFS, "input_schema.md")
-		it.Then(t).Should(it.Nil(err))
+	// t.Run("InvalidInput", func(t *testing.T) {
+	// 	mock := &MockFixed{response: `{"items":[]}`}
+	// 	llm := thinker.LLM{Base: mock}
+	// 	bot, err := agent.NewNanoBot[map[string]any, JSONOut](llm, nanobotFS, "input_schema.md")
+	// 	it.Then(t).Should(it.Nil(err))
 
-		_, err = bot.Prompt(context.Background(), map[string]any{"other": "value"})
+	// 	_, err = bot.Prompt(context.Background(), map[string]any{"other": "value"})
 
-		it.Then(t).ShouldNot(
-			it.Nil(err),
-		)
-		it.Then(t).Should(
-			it.String(err.Error()).Contain("input validation failed"),
-		)
-	})
+	// 	it.Then(t).ShouldNot(
+	// 		it.Nil(err),
+	// 	)
+	// 	it.Then(t).Should(
+	// 		it.String(err.Error()).Contain("input validation failed"),
+	// 	)
+	// })
 }

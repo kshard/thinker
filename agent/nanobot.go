@@ -12,11 +12,12 @@ import (
 	"encoding"
 	"fmt"
 	"io/fs"
+	"os"
 	"strings"
 	"text/template"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/kshard/chatter"
+	"github.com/kshard/chatter/aio"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
@@ -80,6 +81,10 @@ func NewNanoBot[A, B any](llm thinker.LLM, fs fs.FS, file string) (*NanoBot[A, B
 		}
 	}
 
+	if prompt.Debug {
+		ml = aio.NewJsonLogger(os.Stderr, ml)
+	}
+
 	bot := &NanoBot[A, B]{prompt: prompt, t: t}
 	bot.Manifold = NewManifold(
 		ml,
@@ -92,11 +97,12 @@ func NewNanoBot[A, B any](llm thinker.LLM, fs fs.FS, file string) (*NanoBot[A, B
 }
 
 func (bot *NanoBot[A, B]) encode(in A) (chatter.Message, error) {
-	if bot.prompt.Schema.Input != nil {
-		if err := bot.validateSchema(in, bot.prompt.Schema.Input); err != nil {
-			return nil, fmt.Errorf("input validation failed for agent: %w", err)
-		}
-	}
+	// see https://github.com/google/jsonschema-go/issues/23 for details
+	// if bot.prompt.Schema.Input != nil {
+	// 	if err := bot.validateSchema(in, bot.prompt.Schema.Input); err != nil {
+	// 		return nil, fmt.Errorf("input validation failed for agent: %w", err)
+	// 	}
+	// }
 
 	var sb strings.Builder
 	err := bot.t.Execute(&sb, in)
@@ -139,15 +145,16 @@ func (bot *NanoBot[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 	return 1.0, out, nil
 }
 
-func (bot *NanoBot[A, B]) validateSchema(obj any, schema *jsonschema.Schema) error {
-	resolved, err := schema.Resolve(nil)
-	if err != nil {
-		return fmt.Errorf("failed to resolve schema: %w", err)
-	}
-
-	if err := resolved.Validate(obj); err != nil {
-		return fmt.Errorf("invalid object: %w", err)
-	}
-
-	return nil
-}
+// see https://github.com/google/jsonschema-go/issues/23 for details
+// func (bot *NanoBot[A, B]) validateSchema(obj any, schema *jsonschema.Schema) error {
+// 	resolved, err := schema.Resolve(nil)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to resolve schema: %w", err)
+// 	}
+//
+// 	if err := resolved.Validate(obj); err != nil {
+// 		return fmt.Errorf("invalid object: %w", err)
+// 	}
+//
+// 	return nil
+// }

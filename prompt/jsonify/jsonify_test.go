@@ -111,29 +111,29 @@ func TestStrings(t *testing.T) {
 		)
 	})
 
-	t.Run("DecodeWithSchemaInvalid", func(t *testing.T) {
-		minItems := 5
-		schema := &jsonschema.Schema{
-			Type: "array",
-			Items: &jsonschema.Schema{
-				Type: "string",
-			},
-			MinItems: &minItems,
-		}
+	// t.Run("DecodeWithSchemaInvalid", func(t *testing.T) {
+	// 	minItems := 5
+	// 	schema := &jsonschema.Schema{
+	// 		Type: "array",
+	// 		Items: &jsonschema.Schema{
+	// 			Type: "string",
+	// 		},
+	// 		MinItems: &minItems,
+	// 	}
 
-		var seq []string
-		reply := &chatter.Reply{
-			Content: []chatter.Content{
-				chatter.Text(`["only", "three", "items"]`),
-			},
-		}
-		err := jsonify.Strings.Decode(reply, schema, &seq)
-
-		it.Then(t).ShouldNot(
-			it.Nil(err),
-		)
-		it.Then(t).Should(
-			it.String(err.Error()).Contain("JSON has failed schema validation"),
-		)
-	})
+	// 	var seq []string
+	// 	reply := &chatter.Reply{
+	// 		Content: []chatter.Content{
+	// 			chatter.Text(`["only", "three", "items"]`),
+	// 		},
+	// 	}
+	// 	err := jsonify.Strings.Decode(reply, schema, &seq)
+	//
+	// 	it.Then(t).ShouldNot(
+	// 		it.Nil(err),
+	// 	)
+	// 	it.Then(t).Should(
+	// 		it.String(err.Error()).Contain("JSON has failed schema validation"),
+	// 	)
+	// })
 }

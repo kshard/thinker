@@ -34,10 +34,11 @@ func (strings) Harden(prompt *chatter.Prompt, schema *jsonschema.Schema) {
 		`(2) ALWAYS reply with valid JSON only. No explanation, no commentary, no markdown, no code fences, no extra characters before/after the JSON.`,
 		`(3) The JSON must exactly match the schema or structure requested by the user prompt.`,
 		`(4) If any required field cannot be determined, set it to null (do not omit it).`,
-		`(5) If an error occurs or the request cannot be completed, return {"error": "<explain briefly why>", "partial": <true|false>}.`,
-		`(6) Do NOT reveal chain-of-thought or reasoning.`,
-		`(7) Do NOT include trailing commas or comments.`,
-		`(8) Output must be UTF-8 and must be parsable by a standard JSON.parse().`,
+		`(5) Escape special characters in strings properly (e.g. newlines as \n, quotes as \", etc.).`,
+		`(6) If an error occurs or the request cannot be completed, return {"error": "<explain briefly why>", "partial": <true|false>}.`,
+		`(7) Do NOT reveal chain-of-thought or reasoning.`,
+		`(8) Do NOT include trailing commas or comments.`,
+		`(9) Output must be UTF-8 and must be parsable by a standard JSON.parse().`,
 	)
 
 	if schema != nil {
@@ -70,20 +71,21 @@ func (strings) Decode(reply *chatter.Reply, schema *jsonschema.Schema, seq any) 
 		)
 	}
 
-	if schema != nil {
-		resolved, err := schema.Resolve(nil)
-		if err != nil {
-			return err
-		}
+	// see https://github.com/google/jsonschema-go/issues/23 for details
+	// if schema != nil {
+	// 	resolved, err := schema.Resolve(nil)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		if err := resolved.Validate(seq); err != nil {
-			return thinker.Feedback(
-				`Improve the response based on feedback.`,
-				"The output does not contain required JSON format.",
-				"JSON has failed schema validation: "+err.Error(),
-			)
-		}
-	}
+	// 	if err := resolved.Validate(seq); err != nil {
+	// 		return thinker.Feedback(
+	// 			`Improve the response based on feedback.`,
+	// 			"The output does not contain required JSON format.",
+	// 			"JSON has failed schema validation: "+err.Error(),
+	// 		)
+	// 	}
+	// }
 
 	return nil
 }
