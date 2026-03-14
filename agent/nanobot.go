@@ -16,7 +16,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/aio"
 	"github.com/kshard/thinker"
@@ -146,15 +145,16 @@ func (bot *NanoBot[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 	return 1.0, out, nil
 }
 
-func (bot *NanoBot[A, B]) validateSchema(obj any, schema *jsonschema.Schema) error {
-	resolved, err := schema.Resolve(nil)
-	if err != nil {
-		return fmt.Errorf("failed to resolve schema: %w", err)
-	}
-
-	if err := resolved.Validate(obj); err != nil {
-		return fmt.Errorf("invalid object: %w", err)
-	}
-
-	return nil
-}
+// see https://github.com/google/jsonschema-go/issues/23 for details
+// func (bot *NanoBot[A, B]) validateSchema(obj any, schema *jsonschema.Schema) error {
+// 	resolved, err := schema.Resolve(nil)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to resolve schema: %w", err)
+// 	}
+//
+// 	if err := resolved.Validate(obj); err != nil {
+// 		return fmt.Errorf("invalid object: %w", err)
+// 	}
+//
+// 	return nil
+// }
