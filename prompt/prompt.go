@@ -23,6 +23,9 @@ type Prompt struct {
 	// Optional field to specify which LLM to use, e.g. "base", "micro", "small", "medium", "large", "xlarge"
 	RunsOn string
 
+	// Optional debugging mode
+	Debug bool
+
 	// Input/ Output schema
 	Schema Schema
 
@@ -48,6 +51,7 @@ type Server struct {
 type yamlPrompt struct {
 	Format  string       `yaml:"format,omitempty"`
 	RunsOn  string       `yaml:"runs-on,omitempty"`
+	Debug   bool         `yaml:"debug,omitempty"`
 	Schema  *yamlSchema  `yaml:"schema,omitempty"`
 	Servers []yamlServer `yaml:"servers,omitempty"`
 }
@@ -134,6 +138,7 @@ func toPrompt(raw *yamlPrompt, prompt string) *Prompt {
 	return &Prompt{
 		Prompt: prompt,
 		RunsOn: raw.RunsOn,
+		Debug:  raw.Debug,
 		Schema: Schema{
 			Format: raw.Format,
 			Input:  inputSchema,

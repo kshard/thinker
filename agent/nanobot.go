@@ -12,11 +12,13 @@ import (
 	"encoding"
 	"fmt"
 	"io/fs"
+	"os"
 	"strings"
 	"text/template"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/kshard/chatter"
+	"github.com/kshard/chatter/aio"
 	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
@@ -80,6 +82,10 @@ func NewNanoBot[A, B any](llm thinker.LLM, fs fs.FS, file string) (*NanoBot[A, B
 		}
 	}
 
+	if prompt.Debug {
+		ml = aio.NewJsonLogger(os.Stderr, ml)
+	}
+
 	bot := &NanoBot[A, B]{prompt: prompt, t: t}
 	bot.Manifold = NewManifold(
 		ml,
@@ -92,11 +98,12 @@ func NewNanoBot[A, B any](llm thinker.LLM, fs fs.FS, file string) (*NanoBot[A, B
 }
 
 func (bot *NanoBot[A, B]) encode(in A) (chatter.Message, error) {
-	if bot.prompt.Schema.Input != nil {
-		if err := bot.validateSchema(in, bot.prompt.Schema.Input); err != nil {
-			return nil, fmt.Errorf("input validation failed for agent: %w", err)
-		}
-	}
+	// see https://github.com/google/jsonschema-go/issues/23 for details
+	// if bot.prompt.Schema.Input != nil {
+	// 	if err := bot.validateSchema(in, bot.prompt.Schema.Input); err != nil {
+	// 		return nil, fmt.Errorf("input validation failed for agent: %w", err)
+	// 	}
+	// }
 
 	var sb strings.Builder
 	err := bot.t.Execute(&sb, in)
