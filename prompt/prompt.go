@@ -109,6 +109,14 @@ func Parse(r io.Reader) (*Prompt, error) {
 		return nil, fmt.Errorf("failed to parse frontmatter: %w", err)
 	}
 
+	if len(raw.Format) == 0 {
+		raw.Format = "text"
+	}
+
+	if len(raw.RunsOn) == 0 {
+		raw.RunsOn = "base"
+	}
+
 	return toPrompt(&raw, string(parts[1])), nil
 }
 

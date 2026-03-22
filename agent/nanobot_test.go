@@ -17,7 +17,6 @@ import (
 
 	"github.com/fogfish/it/v2"
 	"github.com/kshard/chatter"
-	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 )
 
@@ -118,6 +117,28 @@ func (m *MockError) Prompt(_ context.Context, _ []chatter.Message, _ ...chatter.
 	return nil, errors.New("llm unavailable")
 }
 
+// MockInstances implements agent.Instances for tests.
+type MockInstances struct {
+	models map[string]chatter.Chatter
+}
+
+func newInstances(base chatter.Chatter) *MockInstances {
+	return &MockInstances{models: map[string]chatter.Chatter{"base": base}}
+}
+
+func (m *MockInstances) with(name string, c chatter.Chatter) *MockInstances {
+	m.models[name] = c
+	return m
+}
+
+func (m *MockInstances) Model(name string) (chatter.Chatter, bool) {
+	if name == "" {
+		name = "base"
+	}
+	c, ok := m.models[name]
+	return c, ok
+}
+
 // MockTagged records whether it was called and echoes the prompt content.
 type MockTagged struct {
 	tag    string
@@ -144,7 +165,7 @@ func (m *MockTagged) Prompt(_ context.Context, msgs []chatter.Message, _ ...chat
 
 func TestNewNanoBot(t *testing.T) {
 	t.Run("FileNotFound", func(t *testing.T) {
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		_, err := agent.NewNanoBot[string, TextOut](llm, nanobotFS, "missing.md")
 
 		it.Then(t).ShouldNot(
@@ -153,7 +174,7 @@ func TestNewNanoBot(t *testing.T) {
 	})
 
 	t.Run("InvalidTemplate", func(t *testing.T) {
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		_, err := agent.NewNanoBot[string, TextOut](llm, nanobotFS, "invalid_template.md")
 
 		it.Then(t).ShouldNot(
@@ -162,7 +183,7 @@ func TestNewNanoBot(t *testing.T) {
 	})
 
 	t.Run("ValidTextPrompt", func(t *testing.T) {
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		bot, err := agent.NewNanoBot[string, TextOut](llm, nanobotFS, "text_prompt.md")
 
 		it.Then(t).Should(
@@ -174,7 +195,7 @@ func TestNewNanoBot(t *testing.T) {
 	})
 
 	t.Run("ValidJsonPrompt", func(t *testing.T) {
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		bot, err := agent.NewNanoBot[string, JSONOut](llm, nanobotFS, "json_prompt.md")
 
 		it.Then(t).Should(
@@ -199,12 +220,12 @@ func TestMakeNanoBot(t *testing.T) {
 			)
 		}()
 
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		agent.MakeNanoBot[string, TextOut](llm, nanobotFS, "missing.md")
 	})
 
 	t.Run("SucceedsOnValidFile", func(t *testing.T) {
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		bot := agent.MakeNanoBot[string, TextOut](llm, nanobotFS, "text_prompt.md")
 
 		it.Then(t).ShouldNot(
@@ -219,7 +240,7 @@ func TestMakeNanoBot(t *testing.T) {
 
 func TestNanoBot_TextFormat(t *testing.T) {
 	t.Run("TextUnmarshaler", func(t *testing.T) {
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		bot, err := agent.NewNanoBot[string, TextOut](llm, nanobotFS, "text_prompt.md")
 		it.Then(t).Should(it.Nil(err))
 
@@ -234,7 +255,7 @@ func TestNanoBot_TextFormat(t *testing.T) {
 	})
 
 	t.Run("UnsupportedOutputType", func(t *testing.T) {
-		llm := thinker.LLM{Base: &Mock{}}
+		llm := newInstances(&Mock{})
 		bot, err := agent.NewNanoBot[string, unsupportedOut](llm, nanobotFS, "text_prompt.md")
 		it.Then(t).Should(it.Nil(err))
 
@@ -256,7 +277,7 @@ func TestNanoBot_TextFormat(t *testing.T) {
 func TestNanoBot_JsonFormat(t *testing.T) {
 	t.Run("DecodesValidJSON", func(t *testing.T) {
 		mock := &MockFixed{response: `{"items":["a","b","c"]}`}
-		llm := thinker.LLM{Base: mock}
+		llm := newInstances(mock)
 		bot, err := agent.NewNanoBot[string, JSONOut](llm, nanobotFS, "json_prompt.md")
 		it.Then(t).Should(it.Nil(err))
 
@@ -277,7 +298,7 @@ func TestNanoBot_JsonFormat(t *testing.T) {
 			"not json yet",
 			`{"items":["x"]}`,
 		}}
-		llm := thinker.LLM{Base: mock}
+		llm := newInstances(mock)
 		bot, err := agent.NewNanoBot[string, JSONOut](llm, nanobotFS, "json_prompt.md")
 		it.Then(t).Should(it.Nil(err))
 
@@ -297,7 +318,7 @@ func TestNanoBot_JsonFormat(t *testing.T) {
 
 	t.Run("LLMError", func(t *testing.T) {
 		mock := &MockError{}
-		llm := thinker.LLM{Base: mock}
+		llm := newInstances(mock)
 		bot, err := agent.NewNanoBot[string, JSONOut](llm, nanobotFS, "json_prompt.md")
 		it.Then(t).Should(it.Nil(err))
 
@@ -316,7 +337,7 @@ func TestNanoBot_JsonFormat(t *testing.T) {
 func TestNanoBot_RunsOn(t *testing.T) {
 	t.Run("DefaultUsesBase", func(t *testing.T) {
 		base := &MockTagged{tag: "base"}
-		llm := thinker.LLM{Base: base}
+		llm := newInstances(base)
 		bot, err := agent.NewNanoBot[string, TextOut](llm, nanobotFS, "text_prompt.md")
 		it.Then(t).Should(it.Nil(err))
 
@@ -332,7 +353,7 @@ func TestNanoBot_RunsOn(t *testing.T) {
 
 	t.Run("MicroTier", func(t *testing.T) {
 		micro := &MockTagged{tag: "micro"}
-		llm := thinker.LLM{Base: &Mock{}, Micro: micro}
+		llm := newInstances(&Mock{}).with("micro", micro)
 		bot, err := agent.NewNanoBot[string, TextOut](llm, nanobotFS, "runs_on_micro.md")
 		it.Then(t).Should(it.Nil(err))
 
@@ -354,7 +375,7 @@ func TestNanoBot_RunsOn(t *testing.T) {
 func TestNanoBot_InputValidation(t *testing.T) {
 	t.Run("ValidInput", func(t *testing.T) {
 		mock := &MockFixed{response: `{"items":[]}`}
-		llm := thinker.LLM{Base: mock}
+		llm := newInstances(mock)
 		bot, err := agent.NewNanoBot[map[string]any, JSONOut](llm, nanobotFS, "input_schema.md")
 		it.Then(t).Should(it.Nil(err))
 
