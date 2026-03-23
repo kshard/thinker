@@ -34,7 +34,7 @@ type Instances interface {
 	Model(string) (chatter.Chatter, bool)
 }
 
-func MakeNanoBot[A, B any](llm Instances, fs fs.FS, file string) *NanoBot[A, B] {
+func MustNanoBot[A, B any](llm Instances, fs fs.FS, file string) *NanoBot[A, B] {
 	bot, err := NewNanoBot[A, B](llm, fs, file)
 	if err != nil {
 		panic(err)
