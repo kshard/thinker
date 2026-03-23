@@ -221,12 +221,12 @@ func TestMakeNanoBot(t *testing.T) {
 		}()
 
 		llm := newInstances(&Mock{})
-		agent.MakeNanoBot[string, TextOut](llm, nanobotFS, "missing.md")
+		agent.MustNanoBot[string, TextOut](llm, nanobotFS, "missing.md")
 	})
 
 	t.Run("SucceedsOnValidFile", func(t *testing.T) {
 		llm := newInstances(&Mock{})
-		bot := agent.MakeNanoBot[string, TextOut](llm, nanobotFS, "text_prompt.md")
+		bot := agent.MustNanoBot[string, TextOut](llm, nanobotFS, "text_prompt.md")
 
 		it.Then(t).ShouldNot(
 			it.Nil(bot),
