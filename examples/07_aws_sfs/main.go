@@ -13,9 +13,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
 	"github.com/aws/jsii-runtime-go"
-	"github.com/fogfish/scud"
 	"github.com/fogfish/typestep"
-	"github.com/kshard/chatter/provider/bedrock/iam"
 	"github.com/kshard/thinker/examples/07_aws_sfs/core"
 )
 
@@ -23,9 +21,9 @@ func main() {
 	app := awscdk.NewApp(nil)
 	stack := awscdk.NewStack(app, jsii.String("example-aws-thinker"), nil)
 
-	fm := iam.NewInferenceProfile(stack, jsii.String("InferenceProfile"),
-		jsii.String("us.anthropic.claude-3-7-sonnet-20250219-v1:0"),
-	)
+	// fm := iam.NewInferenceProfile(stack, jsii.String("InferenceProfile"),
+	// 	jsii.String("us.anthropic.claude-3-7-sonnet-20250219-v1:0"),
+	// )
 
 	input := awsevents.NewEventBus(stack, jsii.String("Input"),
 		&awsevents.EventBusProps{
@@ -39,35 +37,36 @@ func main() {
 		},
 	)
 
-	ingest := scud.NewFunctionGo(stack, jsii.String("Ingestor"),
-		&scud.FunctionGoProps{
-			SourceCodeModule: "github.com/kshard/thinker/examples",
-			SourceCodeLambda: "07_aws_sfs/cmd/ingest",
-		},
-	)
-	fm.GrantAccessIn(ingest, jsii.String("us-west-2"))
+	// ingest := typestep.NewFunctionTyped(stack, jsii.String("Ingestor"),
+	// 	typestep.NewFunctionTypedProps(core.TODO, &scud.FunctionGoProps{
+	// 		SourceCodeModule: "github.com/kshard/thinker/examples",
+	// 		SourceCodeLambda: "07_aws_sfs/cmd/ingest",
+	// 	}),
+	// )
+	// fm.GrantAccessIn(ingest, jsii.String("us-west-2"))
 
-	classify := scud.NewFunctionGo(stack, jsii.String("Classify"),
-		&scud.FunctionGoProps{
-			SourceCodeModule: "github.com/kshard/thinker/examples",
-			SourceCodeLambda: "07_aws_sfs/cmd/classify",
-		},
-	)
-	fm.GrantAccessIn(classify, jsii.String("us-west-2"))
+	// classify := typestep.NewFunctionTyped(stack, jsii.String("Classify"),
+	// 	typestep.NewFunctionTypedProps(core.TODO, &scud.FunctionGoProps{
+	// 		SourceCodeModule: "github.com/kshard/thinker/examples",
+	// 		SourceCodeLambda: "07_aws_sfs/cmd/classify",
+	// 	}),
+	// )
+	// fm.GrantAccessIn(classify, jsii.String("us-west-2"))
 
-	insight := scud.NewFunctionGo(stack, jsii.String("Insight"),
-		&scud.FunctionGoProps{
-			SourceCodeModule: "github.com/kshard/thinker/examples",
-			SourceCodeLambda: "07_aws_sfs/cmd/insight",
-		},
-	)
-	fm.GrantAccessIn(insight, jsii.String("us-west-2"))
+	// insight := typestep.NewFunctionTyped(stack, jsii.String("Insight"),
+	// 	typestep.NewFunctionTypedProps(core.TODO, &scud.FunctionGoProps{
+	// 		SourceCodeModule: "github.com/kshard/thinker/examples",
+	// 		SourceCodeLambda: "07_aws_sfs/cmd/insight",
+	// 	}),
+	// )
+
+	// fm.GrantAccessIn(insight, jsii.String("us-west-2"))
 
 	a := typestep.From[core.Document](input)
-	b := typestep.Join(new(core.Ingestor).Ingest, ingest, a)
-	c := typestep.Join(new(core.Classifier).Classify, classify, b)
-	d := typestep.Join(new(core.Insighter).Insight, insight, c)
-	f := typestep.ToQueue(reply, d)
+	// b := typestep.Join(ingest, a)
+	// c := typestep.Join(classify, b)
+	// d := typestep.Join(insight, c)
+	f := typestep.ToQueue(reply, a)
 
 	ts := typestep.NewTypeStep(stack, jsii.String("Agents"),
 		&typestep.TypeStepProps{

@@ -87,10 +87,12 @@ func main() {
 	registry.Attach("calc", session)
 
 	// create instance of LLM API
-	llm, err := autoconfig.FromNetRC("thinker")
-	if err != nil {
-		panic(err)
-	}
+	llm, err := autoconfig.NewInstance(
+		autoconfig.Instance{
+			Provider: "provider:bedrock/foundation/converse",
+			Model:    "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+		},
+	)
 
 	// Create agent with the provided registry
 	agt := agent.NewManifold(
