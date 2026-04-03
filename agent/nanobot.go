@@ -26,8 +26,9 @@ import (
 
 type NanoBot[A, B any] struct {
 	*Manifold[A, B]
-	prompt *prompt.Prompt
-	t      *template.Template
+	attempt int
+	prompt  *prompt.Prompt
+	t       *template.Template
 }
 
 type Instances interface {
@@ -115,6 +116,7 @@ func (bot *NanoBot[A, B]) encode(in A) (chatter.Message, error) {
 		jsonify.Strings.Harden(&prompt, bot.prompt.Schema.Reply)
 	}
 
+	bot.attempt = 0
 	return &prompt, nil
 }
 
@@ -137,6 +139,10 @@ func (bot *NanoBot[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 
 	var out B
 	if err := jsonify.Strings.Decode(reply, bot.prompt.Schema.Reply, &out); err != nil {
+		bot.attempt++
+		if bot.attempt >= bot.prompt.Retry {
+			return 0.0, out, fmt.Errorf("unable to reply with JSON after %d attempts: %w", bot.attempt, err)
+		}
 		return 0.0, out, err
 	}
 
