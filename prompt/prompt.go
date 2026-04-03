@@ -23,6 +23,10 @@ type Prompt struct {
 	// Optional field to specify which LLM to use, e.g. "base", "micro", "small", "medium", "large", "xlarge"
 	RunsOn string
 
+	// Optional field to specify how many times to retry the prompt in case of failure.
+	// Default is 3
+	Retry int
+
 	// Optional debugging mode
 	Debug bool
 
@@ -51,6 +55,7 @@ type Server struct {
 type yamlPrompt struct {
 	Format  string       `yaml:"format,omitempty"`
 	RunsOn  string       `yaml:"runs-on,omitempty"`
+	Retry   int          `yaml:"retry,omitempty"`
 	Debug   bool         `yaml:"debug,omitempty"`
 	Schema  *yamlSchema  `yaml:"schema,omitempty"`
 	Servers []yamlServer `yaml:"servers,omitempty"`
@@ -143,9 +148,14 @@ func toPrompt(raw *yamlPrompt, prompt string) *Prompt {
 		replySchema = toSchema(raw.Schema.Reply)
 	}
 
+	if raw.Retry == 0 {
+		raw.Retry = 3
+	}
+
 	return &Prompt{
 		Prompt: prompt,
 		RunsOn: raw.RunsOn,
+		Retry:  raw.Retry,
 		Debug:  raw.Debug,
 		Schema: Schema{
 			Format: raw.Format,
