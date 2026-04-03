@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.248.0
 	github.com/aws/aws-lambda-go v1.54.0
 	github.com/aws/jsii-runtime-go v1.127.0
-	github.com/fogfish/scud v0.13.1
 	github.com/fogfish/stream v1.3.6
 	github.com/fogfish/typestep v0.0.6
 	github.com/kshard/chatter v0.11.2
@@ -62,6 +61,7 @@ require (
 	github.com/fogfish/logger/v3 v3.2.1 // indirect
 	github.com/fogfish/logger/x/xlog v0.0.1 // indirect
 	github.com/fogfish/opts v0.0.5 // indirect
+	github.com/fogfish/scud v0.13.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
