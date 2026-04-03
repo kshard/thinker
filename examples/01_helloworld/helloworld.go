@@ -38,7 +38,12 @@ func anagram(expr string) (chatter.Message, error) {
 
 func main() {
 	// create instance of LLM API, see doc/HOWTO.md for details
-	llm, err := autoconfig.FromNetRC("thinker")
+	llm, err := autoconfig.NewInstance(
+		autoconfig.Instance{
+			Provider: "provider:bedrock/foundation/converse",
+			Model:    "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+		},
+	)
 	if err != nil {
 		panic(err)
 	}

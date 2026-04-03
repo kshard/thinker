@@ -43,10 +43,12 @@ func processor(s string) (chatter.Message, error) {
 }
 
 func main() {
-	llm, err := autoconfig.FromNetRC("thinker")
-	if err != nil {
-		panic(err)
-	}
+	llm, err := autoconfig.NewInstance(
+		autoconfig.Instance{
+			Provider: "provider:bedrock/foundation/converse",
+			Model:    "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+		},
+	)
 
 	// In this example, we need to mount two file systems, containing input and
 	// output data.
@@ -74,7 +76,7 @@ func main() {
 	wrk := agent.NewPrompter(llm, processor)
 
 	fmt.Printf("==> processing files ...\n")
-	q.ForEach(context.Background(), "/",
+	q.ForEach(context.Background(), spool.WalkDir("/"),
 		func(ctx context.Context, path string, r io.Reader, w io.Writer) error {
 			fmt.Printf("==> %v ...\n", path)
 
