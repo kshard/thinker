@@ -6,7 +6,7 @@
 // https://github.com/kshard/thinker
 //
 
-package worker
+package nanobot
 
 import (
 	"github.com/kshard/chatter"
@@ -25,6 +25,10 @@ type Jsonify[A any] struct {
 	validator func([]string) error
 }
 
+// NewJsonify creates a Jsonify agent that sends the encoded input to the LLM
+// and retries up to attempts times until the response decodes to a valid
+// []string that satisfies the validator. The encoder converts A into a prompt,
+// and the validator performs any domain-specific checks on the returned list.
 func NewJsonify[A any](
 	llm chatter.Chatter,
 	attempts int,

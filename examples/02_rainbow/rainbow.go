@@ -18,7 +18,7 @@ import (
 	"github.com/kshard/chatter/aio"
 	"github.com/kshard/chatter/provider/autoconfig"
 	"github.com/kshard/thinker"
-	"github.com/kshard/thinker/agent/worker"
+	"github.com/kshard/thinker/agent/nanobot"
 	"github.com/kshard/thinker/codec"
 )
 
@@ -56,7 +56,7 @@ func main() {
 		},
 	)
 
-	agt := worker.NewJsonify(
+	agt := nanobot.NewJsonify(
 		// enable debug output for LLMs dialog
 		aio.NewJsonLogger(os.Stdout, llm),
 
