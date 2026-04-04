@@ -17,6 +17,9 @@ import (
 // * expected input/output format (json schema)
 // * list of servers
 type Prompt struct {
+	// Human readable name of the prompt, used for logging
+	Name string
+
 	// Prompt template, using Golang template syntax, e.g. "What is the capital of {{.Country}}?"
 	Prompt string
 
@@ -53,6 +56,7 @@ type Server struct {
 }
 
 type yamlPrompt struct {
+	Name    string       `yaml:"name,omitempty"`
 	Format  string       `yaml:"format,omitempty"`
 	RunsOn  string       `yaml:"runs-on,omitempty"`
 	Retry   int          `yaml:"retry,omitempty"`
@@ -153,6 +157,7 @@ func toPrompt(raw *yamlPrompt, prompt string) *Prompt {
 	}
 
 	return &Prompt{
+		Name:   raw.Name,
 		Prompt: prompt,
 		RunsOn: raw.RunsOn,
 		Retry:  raw.Retry,

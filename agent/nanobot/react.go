@@ -1,50 +1,59 @@
 //
-// Copyright (C) 2026 Dmitry Kolesnikov
+// Copyright (C) 2025 - 2026 Dmitry Kolesnikov
 //
 // This file may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 // https://github.com/kshard/thinker
 //
 
-package agent
+package nanobot
 
 import (
+	"context"
 	"encoding"
 	"fmt"
-	"io/fs"
 	"os"
+	"reflect"
 	"strings"
 	"text/template"
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/aio"
+	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
 	"github.com/kshard/thinker/prompt"
 	"github.com/kshard/thinker/prompt/jsonify"
 )
 
-type NanoBot[A, B any] struct {
-	*Manifold[A, B]
+// ReAct is a prompt-file-driven agent that implements the
+// Reason-and-Act pattern via a Manifold loop. It loads a prompt template
+// from the file system, selects the appropriate LLM from the runtime, wires
+// up any MCP tool servers declared in the prompt file, and exposes a single
+// Prompt method that drives the full ReAct cycle.
+type ReAct[A, B any] struct {
+	*agent.Manifold[A, B]
 	attempt int
 	prompt  *prompt.Prompt
 	t       *template.Template
+	chalk   Chalk
 }
 
-type Instances interface {
-	Model(string) (chatter.Chatter, bool)
-}
-
-func MustNanoBot[A, B any](llm Instances, fs fs.FS, file string) *NanoBot[A, B] {
-	bot, err := NewNanoBot[A, B](llm, fs, file)
+// MustReAct is like NewReAct but panics on error.
+func MustReAct[A, B any](rt *Runtime, file string) *ReAct[A, B] {
+	bot, err := NewReAct[A, B](rt, file)
 	if err != nil {
 		panic(err)
 	}
 	return bot
 }
 
-func NewNanoBot[A, B any](llm Instances, fs fs.FS, file string) (*NanoBot[A, B], error) {
-	prompt, err := prompt.ParseFile(fs, file)
+// NewReAct creates a ReAct agent from the prompt file at the given path
+// within the runtime's file system. The prompt file's front-matter controls
+// the model name, output format, retry budget, and any tool servers to
+// connect.
+func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
+	prompt, err := prompt.ParseFile(rt.FileSystem, file)
 	if err != nil {
 		return nil, err
 	}
@@ -54,16 +63,21 @@ func NewNanoBot[A, B any](llm Instances, fs fs.FS, file string) (*NanoBot[A, B],
 		return nil, err
 	}
 
-	runner, ok := llm.Model(prompt.RunsOn)
-	if !ok && prompt.RunsOn != "base" {
-		runner, _ = llm.Model("base")
+	const base = "base"
+	runner, ok := rt.LLMs.Model(prompt.RunsOn)
+	if !ok && prompt.RunsOn != base {
+		runner, _ = rt.LLMs.Model(base)
 	}
 
 	if runner == nil {
 		return nil, fmt.Errorf("no model found for prompt: %s", prompt.RunsOn)
 	}
 
-	registry := command.NewRegistry()
+	registry := rt.Registry
+	if registry == nil {
+		registry = command.NewRegistry()
+	}
+
 	for _, server := range prompt.Servers {
 		switch {
 		case len(server.Url) > 0:
@@ -84,8 +98,12 @@ func NewNanoBot[A, B any](llm Instances, fs fs.FS, file string) (*NanoBot[A, B],
 		runner = aio.NewJsonLogger(os.Stderr, runner)
 	}
 
-	bot := &NanoBot[A, B]{prompt: prompt, t: t}
-	bot.Manifold = NewManifold(
+	bot := &ReAct[A, B]{prompt: prompt, t: t, chalk: rt.Chalk}
+	if len(bot.prompt.Name) == 0 {
+		bot.chalk = devnull{}
+	}
+
+	bot.Manifold = agent.NewManifold(
 		runner,
 		codec.FromEncoder(bot.encode),
 		codec.FromDecoder(bot.decode),
@@ -95,7 +113,28 @@ func NewNanoBot[A, B any](llm Instances, fs fs.FS, file string) (*NanoBot[A, B],
 	return bot, nil
 }
 
-func (bot *NanoBot[A, B]) encode(in A) (chatter.Message, error) {
+// Prompt encodes the input using the prompt template, runs the Manifold
+// ReAct loop until the model returns a final answer, and decodes the result
+// into B. Progress is reported via the Chalk sink when the prompt file
+// declares a name.
+func (bot *ReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
+	bot.chalk.Task(ctx, bot.prompt.Name)
+	val, err := bot.Manifold.Prompt(ctx, input, opt...)
+	if err != nil {
+		if len(bot.prompt.Name) > 0 {
+			bot.chalk.Fail(err)
+		}
+		return val, err
+	}
+
+	if len(bot.prompt.Name) > 0 {
+		bot.chalk.Done()
+	}
+
+	return val, nil
+}
+
+func (bot *ReAct[A, B]) encode(in A) (chatter.Message, error) {
 	// see https://github.com/google/jsonschema-go/issues/23 for details
 	// if bot.prompt.Schema.Input != nil {
 	// 	if err := bot.validateSchema(in, bot.prompt.Schema.Input); err != nil {
@@ -120,7 +159,7 @@ func (bot *NanoBot[A, B]) encode(in A) (chatter.Message, error) {
 	return &prompt, nil
 }
 
-func (bot *NanoBot[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
+func (bot *ReAct[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 	if bot.prompt.Schema.Format == "text" {
 		out := new(B)
 
@@ -133,6 +172,11 @@ func (bot *NanoBot[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 			}
 			return 1.0, *out, nil
 		default:
+			rv := reflect.ValueOf(out)
+			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.String {
+				rv.Elem().SetString(reply.String())
+				return 1.0, *out, nil
+			}
 			return 0.0, *out, fmt.Errorf("nanobot unable to handle type: %T as string", out)
 		}
 	}
