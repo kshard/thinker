@@ -56,10 +56,6 @@ type MockLLMs struct {
 	models map[string]chatter.Chatter
 }
 
-func newMockLLMs(models map[string]chatter.Chatter) *MockLLMs {
-	return &MockLLMs{models: models}
-}
-
 func (m *MockLLMs) Model(name string) (chatter.Chatter, bool) {
 	c, ok := m.models[name]
 	return c, ok
@@ -76,8 +72,8 @@ func (c *MockChalk) Sub(ctx context.Context) context.Context { return ctx }
 func (c *MockChalk) Task(_ context.Context, format string, _ ...any) {
 	c.tasks = append(c.tasks, format)
 }
-func (c *MockChalk) Done(...string)    { c.dones++ }
-func (c *MockChalk) Fail(err error)   { c.failed = append(c.failed, err) }
+func (c *MockChalk) Done(...string)        { c.dones++ }
+func (c *MockChalk) Fail(err error)        { c.failed = append(c.failed, err) }
 func (c *MockChalk) Printf(string, ...any) {}
 
 // =============================================================================
