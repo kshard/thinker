@@ -186,28 +186,30 @@ func TestSeq(t *testing.T) {
 	})
 
 	t.Run("WithApply", func(t *testing.T) {
+		type A string
+		type B string
 		type StateAB struct {
-			A string
-			B string
+			A A
+			B B
 		}
 
 		applied := ""
-		botA := &MockBot[StateAB, string]{
-			fn: func(_ context.Context, _ StateAB, _ ...chatter.Opt) (string, error) {
+		botA := &MockBot[StateAB, A]{
+			fn: func(_ context.Context, _ StateAB, _ ...chatter.Opt) (A, error) {
 				return "output-a", nil
 			},
 		}
-		botB := &MockBot[StateAB, string]{
-			fn: func(_ context.Context, s StateAB, _ ...chatter.Opt) (string, error) {
-				return s.A, nil
+		botB := &MockBot[StateAB, B]{
+			fn: func(_ context.Context, s StateAB, _ ...chatter.Opt) (B, error) {
+				return B(s.A), nil
 			},
 		}
 
 		seq, err := nanobot.NewSeq(rt, botA, botB)
 		it.Then(t).Should(it.Nil(err))
 
-		seq = seq.WithApply(func(s StateAB, a string) StateAB {
-			applied = a
+		seq = seq.WithApply(func(s StateAB, a A) StateAB {
+			applied = string(a)
 			return StateAB{A: a, B: s.B}
 		})
 
