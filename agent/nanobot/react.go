@@ -19,9 +19,11 @@ import (
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/chatter/aio"
+	"github.com/kshard/thinker"
 	"github.com/kshard/thinker/agent"
 	"github.com/kshard/thinker/codec"
 	"github.com/kshard/thinker/command"
+	"github.com/kshard/thinker/memory"
 	"github.com/kshard/thinker/prompt"
 	"github.com/kshard/thinker/prompt/jsonify"
 )
@@ -33,10 +35,13 @@ import (
 // Prompt method that drives the full ReAct cycle.
 type ReAct[A, B any] struct {
 	*agent.Manifold[A, B]
-	attempt int
-	prompt  *prompt.Prompt
-	t       *template.Template
-	chalk   Chalk
+	attempt  int
+	external bool
+	memory   thinker.Memory
+	registry thinker.Registry
+	prompt   *prompt.Prompt
+	t        *template.Template
+	chalk    Chalk
 }
 
 // MustReAct is like NewReAct but panics on error.
@@ -73,11 +78,7 @@ func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
 		return nil, fmt.Errorf("no model found for prompt: %s", prompt.RunsOn)
 	}
 
-	registry := rt.Registry
-	if registry == nil {
-		registry = command.NewRegistry()
-	}
-
+	registry := command.NewRegistry()
 	for _, server := range prompt.Servers {
 		switch {
 		case len(server.Url) > 0:
@@ -103,14 +104,27 @@ func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
 		bot.chalk = devnull{}
 	}
 
+	bot.memory = memory.NewStream(-1, "")
+	bot.registry = rt.Registry
 	bot.Manifold = agent.NewManifold(
 		runner,
 		codec.FromEncoder(bot.encode),
 		codec.FromDecoder(bot.decode),
 		registry,
-	)
+	).WithMemory(bot.memory)
 
 	return bot, nil
+}
+
+func (bot *ReAct[A, B]) WithMemory(memory thinker.Memory) *ReAct[A, B] {
+	bot.memory, bot.external = memory, true
+	bot.Manifold = bot.Manifold.WithMemory(memory)
+	return bot
+}
+
+func (bot *ReAct[A, B]) WithRegistry(registry thinker.Registry) *ReAct[A, B] {
+	bot.registry = registry
+	return bot
 }
 
 // Prompt encodes the input using the prompt template, runs the Manifold
@@ -118,6 +132,14 @@ func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
 // into B. Progress is reported via the Chalk sink when the prompt file
 // declares a name.
 func (bot *ReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
+	if !bot.external {
+		bot.memory.Reset()
+	}
+
+	if bot.registry != nil {
+		opt = append(opt, bot.registry.Context())
+	}
+
 	bot.chalk.Task(ctx, bot.prompt.Name)
 	val, err := bot.Manifold.Prompt(ctx, input, opt...)
 	if err != nil {

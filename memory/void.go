@@ -26,16 +26,21 @@ func NewVoid(stratum chatter.Stratum) *Void {
 }
 
 // intentional the loss of memories, including facts, information and experiences
-func (s *Void) Purge() {}
+func (s *Void) Reset() {}
 
 // Commit new observation into memory.
 func (s *Void) Commit(e *thinker.Observation) {}
 
 // Builds the context window for LLM using incoming prompt.
 func (s *Void) Context(prompt chatter.Message) []chatter.Message {
-	if len(s.stratum) == 0 {
-		return []chatter.Message{prompt}
+	seq := make([]chatter.Message, 0)
+	if len(s.stratum) > 0 {
+		seq = append(seq, s.stratum)
 	}
 
-	return []chatter.Message{s.stratum, prompt}
+	if prompt != nil {
+		seq = append(seq, prompt)
+	}
+
+	return seq
 }

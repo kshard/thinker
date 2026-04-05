@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.14
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.10
 	github.com/fogfish/faults v0.3.2
-	github.com/fogfish/golem/optics v0.14.1
+	github.com/fogfish/golem/optics v0.14.2
 	github.com/fogfish/guid/v2 v2.1.0
 	github.com/fogfish/it/v2 v2.2.4
 	github.com/goccy/go-yaml v1.19.2
@@ -30,7 +30,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.30.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.19 // indirect
 	github.com/aws/smithy-go v1.24.3 // indirect
-	github.com/fogfish/golem/hseq v1.3.0 // indirect
+	github.com/fogfish/golem/hseq v1.3.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect

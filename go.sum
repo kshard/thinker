@@ -31,10 +31,10 @@ github.com/chewxy/math32 v1.10.1/go.mod h1:dOB2rcuFrCn6UHrze36WSLVPKtzPMRAQvBvUw
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/fogfish/faults v0.3.2 h1:kQai2/VyXJxfd6SD/jYLHiqu0qDl/KXT48q1ppLMAnY=
 github.com/fogfish/faults v0.3.2/go.mod h1:y8zvZN2pQUe9vDS7rzz0mAnbdfYMorPOeqxpy83YOCk=
-github.com/fogfish/golem/hseq v1.3.0 h1:WIJViOF7vsPHvqVLzFrIz4QrBI4EPTC34esrQnjqUvk=
-github.com/fogfish/golem/hseq v1.3.0/go.mod h1:17XORt8nNKl6KOhF43MHSmjK8NksbkBsohAoJGiinUs=
-github.com/fogfish/golem/optics v0.14.1 h1:aIgTSCYdXn0FBcTUlR3FSG75yTEEUiT6wRgTGyTEnOk=
-github.com/fogfish/golem/optics v0.14.1/go.mod h1:aTXUA/VC6yu3zbUN1Tmy4Z4IW0jxfDFF4c2UB5MuwkA=
+github.com/fogfish/golem/hseq v1.3.1 h1:UyCmp44JcXvs7OVXJxnJldur/UpL5skJGTKdDFxYUsU=
+github.com/fogfish/golem/hseq v1.3.1/go.mod h1:17XORt8nNKl6KOhF43MHSmjK8NksbkBsohAoJGiinUs=
+github.com/fogfish/golem/optics v0.14.2 h1:bKu+8kGeieRIgpEyqlGaMPXapNGqDrklc7k4HbSLh5M=
+github.com/fogfish/golem/optics v0.14.2/go.mod h1:qbtka94yn+x5U1KDD+UX69C07M6I2J9xgwOciAYYeI8=
 github.com/fogfish/guid/v2 v2.1.0 h1:oEJHKM4yFOOCmKZdh0oH7eD3mL32n2+1YCc27lXB5rE=
 github.com/fogfish/guid/v2 v2.1.0/go.mod h1:KkZ5T4EE3BqWQJFZBPLSHV/tBe23Xq4KvuPfwtNtepU=
 github.com/fogfish/it/v2 v2.2.4 h1:hkBePGW7X/wDc1QCLG/j+/j47TG4obnozYsGMX51yMQ=

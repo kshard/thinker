@@ -39,7 +39,7 @@ func NewStream(cap int, stratum chatter.Stratum) *Stream {
 	}
 }
 
-func (s *Stream) Purge() {
+func (s *Stream) Reset() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -76,7 +76,9 @@ func (s *Stream) Context(prompt chatter.Message) []chatter.Message {
 		seq = append(seq, evidence.Reply.Content)
 	}
 
-	seq = append(seq, prompt)
+	if prompt != nil {
+		seq = append(seq, prompt)
+	}
 
 	return seq
 }
