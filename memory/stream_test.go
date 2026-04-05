@@ -102,7 +102,7 @@ func TestStream(t *testing.T) {
 			it.Seq(seq).Equal("role.", "a.", "a.", "b.", "b.", "c."),
 		)
 
-		s.Purge()
+		s.Reset()
 
 		seq = make([]string, 0)
 		for _, x := range s.Context(&chatter.Prompt{Task: "c."}) {

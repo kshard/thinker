@@ -14,10 +14,12 @@ import (
 
 	"github.com/kshard/chatter"
 	"github.com/kshard/thinker"
+	"github.com/kshard/thinker/memory"
 )
 
 type Manifold[A, B any] struct {
 	llm      chatter.Chatter
+	memory   thinker.Memory
 	encoder  thinker.Encoder[A]
 	decoder  thinker.Decoder[B]
 	registry thinker.Registry
@@ -31,19 +33,20 @@ func NewManifold[A, B any](
 ) *Manifold[A, B] {
 	return &Manifold[A, B]{
 		llm:      llm,
+		memory:   memory.NewStream(-1, ""),
 		encoder:  encoder,
 		decoder:  decoder,
 		registry: registry,
 	}
 }
 
+func (manifold *Manifold[A, B]) WithMemory(memory thinker.Memory) *Manifold[A, B] {
+	manifold.memory = memory
+	return manifold
+}
+
 func (manifold *Manifold[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
 	var nul B
-
-	switch v := manifold.llm.(type) {
-	case interface{ ResetQuota() }:
-		v.ResetQuota()
-	}
 
 	prompt, err := manifold.encoder.Encode(input)
 	if err != nil {
@@ -51,13 +54,14 @@ func (manifold *Manifold[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 	}
 
 	opt = append(opt, manifold.registry.Context())
-	memory := []chatter.Message{prompt}
 
 	for {
-		reply, err := manifold.llm.Prompt(ctx, memory, opt...)
+		shortMemory := manifold.memory.Context(prompt)
+		reply, err := manifold.llm.Prompt(ctx, shortMemory, opt...)
 		if err != nil {
 			return nul, thinker.ErrLLM.With(err)
 		}
+		manifold.memory.Commit(thinker.NewObservation(prompt, reply))
 
 		switch reply.Stage {
 		case chatter.LLM_RETURN:
@@ -68,9 +72,10 @@ func (manifold *Manifold[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 					return nul, err
 				}
 
-				var prompt chatter.Prompt
-				prompt.With(feedback)
-				memory = append(memory, reply, &prompt)
+				var fprompt chatter.Prompt
+				fprompt.With(feedback)
+				prompt = &fprompt
+
 				continue
 			}
 			return ret, nil
@@ -82,28 +87,47 @@ func (manifold *Manifold[A, B]) Prompt(ctx context.Context, input A, opt ...chat
 					return nul, err
 				}
 
-				var prompt chatter.Prompt
-				prompt.With(feedback)
-				memory = append(memory, reply, &prompt)
+				var fprompt chatter.Prompt
+				fprompt.With(feedback)
+				prompt = &fprompt
+
 				continue
 			}
 			return ret, nil
 		case chatter.LLM_INVOKE:
 			stage, answer, err := manifold.registry.Invoke(reply)
 			if err != nil {
-				return nul, thinker.ErrCmd.With(err)
+				var feedback chatter.Content
+				if ok := errors.As(err, &feedback); !ok {
+					return nul, thinker.ErrCmd.With(err)
+				}
+
+				var fprompt chatter.Prompt
+				fprompt.With(feedback)
+				prompt = &fprompt
+
+				continue
 			}
 			switch stage {
 			case thinker.AGENT_RETURN:
 				_, ret, err := manifold.decoder.Decode(&chatter.Reply{Content: []chatter.Content{answer}})
 				if err != nil {
-					return nul, thinker.ErrCmd.With(err)
+					var feedback chatter.Content
+					if ok := errors.As(err, &feedback); !ok {
+						return nul, thinker.ErrCmd.With(err)
+					}
+
+					var fprompt chatter.Prompt
+					fprompt.With(feedback)
+					prompt = &fprompt
+
+					continue
 				}
 				return ret, nil
 			case thinker.AGENT_ABORT:
 				return nul, thinker.ErrAborted
 			default:
-				memory = append(memory, reply, answer)
+				prompt = answer
 			}
 		default:
 			return nul, thinker.ErrAborted

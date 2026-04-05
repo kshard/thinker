@@ -41,27 +41,10 @@ func NewAutomata[A, B any](
 	}
 }
 
-// Purge automata's memory
-func (automata *Automata[A, B]) Purge() {
-	automata.reasoner.Purge()
-	automata.memory.Purge()
-}
-
-// Forget the agent state and prompt within a new session
-func (automata *Automata[A, B]) PromptOnce(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
-	automata.Purge()
-	return automata.Prompt(ctx, input, opt...)
-}
-
 // Prompt agent
 func (automata *Automata[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
 	var nul B
 	state := thinker.State[B]{Phase: thinker.AGENT_ASK, Epoch: 0}
-
-	switch v := automata.llm.(type) {
-	case interface{ ResetQuota() }:
-		v.ResetQuota()
-	}
 
 	prompt, err := automata.encoder.Encode(input)
 	if err != nil {
