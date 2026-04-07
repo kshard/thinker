@@ -15,5 +15,5 @@ type Registry interface {
 	Context() chatter.Registry
 
 	// Invoke the registry
-	Invoke(reply *chatter.Reply) (Phase, chatter.Message, error)
+	Invoke(*chatter.Reply) (Phase, chatter.Message, error)
 }

@@ -11,7 +11,7 @@ require (
 	github.com/fogfish/stream v1.3.6
 	github.com/fogfish/typestep v0.0.6
 	github.com/kshard/chatter v0.11.2
-	github.com/kshard/chatter/provider/autoconfig v0.13.0
+	github.com/kshard/chatter/provider/autoconfig v0.13.1
 	github.com/kshard/chatter/provider/bedrock v0.10.1
 	github.com/kshard/thinker v0.0.0-00010101000000-000000000000
 	github.com/modelcontextprotocol/go-sdk v1.4.1
@@ -54,8 +54,8 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fogfish/faults v0.3.2 // indirect
 	github.com/fogfish/golem/duct v0.0.1 // indirect
-	github.com/fogfish/golem/hseq v1.3.0 // indirect
-	github.com/fogfish/golem/optics v0.14.0 // indirect
+	github.com/fogfish/golem/hseq v1.3.1 // indirect
+	github.com/fogfish/golem/optics v0.14.2 // indirect
 	github.com/fogfish/guid/v2 v2.1.0 // indirect
 	github.com/fogfish/gurl/v2 v2.10.0 // indirect
 	github.com/fogfish/logger/v3 v3.2.1 // indirect

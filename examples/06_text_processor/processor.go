@@ -85,7 +85,7 @@ func main() {
 				return err
 			}
 
-			kwd, err := wrk.PromptOnce(ctx, string(txt))
+			kwd, err := wrk.Prompt(ctx, string(txt))
 			if err != nil {
 				return err
 			}

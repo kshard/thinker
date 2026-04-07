@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/jsonschema-go/jsonschema"
@@ -79,6 +80,11 @@ type yamlServer struct {
 
 // Build a prompt from a markdown file, the file might contain YAML metadata and must markdown content
 func ParseFile(fs fs.FS, path string) (*Prompt, error) {
+	const prefix = "data:text/markdown,"
+	if strings.HasPrefix(path, prefix) {
+		return Parse(strings.NewReader(path[len(prefix):]))
+	}
+
 	fd, err := fs.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open agent file: %w", err)
@@ -102,7 +108,14 @@ func Parse(r io.Reader) (*Prompt, error) {
 	var div = []byte("---\n")
 
 	if !bytes.HasPrefix(data, div) {
-		return &Prompt{Prompt: string(data)}, nil
+		return &Prompt{
+			Prompt: string(data),
+			RunsOn: "base",
+			Retry:  3,
+			Schema: Schema{
+				Format: "text",
+			},
+		}, nil
 	}
 
 	parts := bytes.SplitN(data[len(div):], []byte(div), 2)

@@ -27,8 +27,8 @@ func TestParsePurePlaintext(t *testing.T) {
 	it.Then(t).Should(
 		it.Nil(err),
 		it.Equal(p.Prompt, text),
-		it.Equal(p.RunsOn, ""),
-		it.Equal(p.Schema.Format, ""),
+		it.Equal(p.RunsOn, "base"),
+		it.Equal(p.Schema.Format, "text"),
 	).Should(
 		it.Seq(p.Servers).BeEmpty(),
 	)
