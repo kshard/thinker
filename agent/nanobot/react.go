@@ -34,11 +34,11 @@ import (
 // up any MCP tool servers declared in the prompt file, and exposes a single
 // Prompt method that drives the full ReAct cycle.
 type ReAct[A, B any] struct {
-	*agent.Manifold[A, B]
+	manifold *agent.Manifold[A, B]
 	attempt  int
 	external bool
 	memory   thinker.Memory
-	registry thinker.Registry
+	registry *command.SeqRegistry
 	prompt   *prompt.Prompt
 	t        *template.Template
 	chalk    Chalk
@@ -104,13 +104,17 @@ func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
 		bot.chalk = devnull{}
 	}
 
+	bot.registry = command.NewSeqRegistry()
+	bot.registry.Bind(registry)
+	bot.registry.Bind(rt.Registry)
+
 	bot.memory = memory.NewStream(-1, "")
-	bot.registry = rt.Registry
-	bot.Manifold = agent.NewManifold(
+
+	bot.manifold = agent.NewManifold(
 		runner,
 		codec.FromEncoder(bot.encode),
 		codec.FromDecoder(bot.decode),
-		registry,
+		bot.registry,
 	).WithMemory(bot.memory)
 
 	return bot, nil
@@ -118,12 +122,12 @@ func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
 
 func (bot *ReAct[A, B]) WithMemory(memory thinker.Memory) *ReAct[A, B] {
 	bot.memory, bot.external = memory, true
-	bot.Manifold = bot.Manifold.WithMemory(memory)
+	bot.manifold = bot.manifold.WithMemory(memory)
 	return bot
 }
 
-func (bot *ReAct[A, B]) WithRegistry(registry thinker.Registry) *ReAct[A, B] {
-	bot.registry = registry
+func (bot *ReAct[A, B]) WithRegistry(r *command.Registry) *ReAct[A, B] {
+	bot.registry.Bind(r)
 	return bot
 }
 
@@ -136,12 +140,8 @@ func (bot *ReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt)
 		bot.memory.Reset()
 	}
 
-	if bot.registry != nil {
-		opt = append(opt, bot.registry.Context())
-	}
-
 	bot.chalk.Task(ctx, bot.prompt.Name)
-	val, err := bot.Manifold.Prompt(ctx, input, opt...)
+	val, err := bot.manifold.Prompt(ctx, input, opt...)
 	if err != nil {
 		if len(bot.prompt.Name) > 0 {
 			bot.chalk.Fail(err)

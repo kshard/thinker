@@ -49,6 +49,7 @@ func NewRegistry() *Registry {
 
 func (r *Registry) ConnectUrl(id string, url string) error {
 	// TODO: implement connection closing
+
 	rpc, err := NewAuthTransport(AuthConfig{Endpoint: url})
 	if err != nil {
 		return err

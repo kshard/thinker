@@ -1,7 +1,7 @@
 <p align="center">
   <img src="./doc/thinker-4.svg" height="220" />
   <h3 align="center">thinker</h3>
-  <p align="center"><strong>LLM generative agents for Golang</strong></p>
+  <p align="center"><strong>Typed Determinism for Probabilistic AI</strong></p>
 
   <p align="center">
     <!-- Version -->
@@ -33,297 +33,191 @@
 
 ---
 
-`thinker` is a Go library for building LLM-based generative agents. It provides type-safe, composable building blocks — from a single prompt call up to a full autonomous agent with memory, reasoning, and tool use — all sharing the same `ƒ: A ⟼ B` agent model.
+`thinker` is a minimal, strictly typed Go framework that models all AI interactions — from simple prompts to complex autonomous loops — as composable side-effect functions (`ƒ: A ⟼ B`). It equips developers with idiomatic patterns to build robust AI agents, safely bridging Go's strict determinism with the probabilistic behavior of language models.
 
-## Overview
-
-- [Overview](#overview)
 - [Design](#design)
+- [Why Go for AI?](#why-go-for-ai)
+  - [1. Deterministic Guardrails for Probabilistic Logic](#1-deterministic-guardrails-for-probabilistic-logic)
+  - [2. The Blackboard and concurrency](#2-the-blackboard-and-concurrency)
+  - [3. Refactorability of Evolving Schemas](#3-refactorability-of-evolving-schemas)
+  - [4. The "Context" of Agency](#4-the-context-of-agency)
+  - [5. Deployment as an Artifact, Not an Environment](#5-deployment-as-an-artifact-not-an-environment)
 - [Quick start](#quick-start)
-- [Core abstractions](#core-abstractions)
-  - [Agent interface](#agent-interface)
-  - [Encoder and Decoder](#encoder-and-decoder)
-  - [Memory](#memory)
-  - [Reasoner](#reasoner)
-  - [Registry — MCP tools](#registry--mcp-tools)
-- [Agentic toolkit](#agentic-toolkit)
-  - [Prompter](#prompter)
-  - [Manifold](#manifold)
-  - [Automata](#automata)
-- [Agent development with nanobot](#agent-development-with-nanobot)
-  - [Runtime](#runtime)
-  - [ReAct](#react)
-  - [Seq](#seq)
-  - [ThinkReAct](#thinkreact)
-  - [Reflect](#reflect)
-  - [Jsonify](#jsonify)
-- [Agent composition](#agent-composition)
-- [FAQ](#faq)
+- [High-level abstractions (Nanobot)](#high-level-abstractions-nanobot)
+  - [ReAct\[A, B\]](#reacta-b)
+  - [ThinkReAct\[S, A, B\]](#thinkreacts-a-b)
+  - [Reflect\[S, A, B\]](#reflects-a-b)
+  - [Seq\[S, A, B\]](#seqs-a-b)
+  - [Blackboard pattern](#blackboard-pattern)
+- [Commands, Tools and MCP Servers](#commands-tools-and-mcp-servers)
+- [Composition](#composition)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Design
 
-The library is guided by four principles:
+An agent is a side-effect function `ƒ: A ⟼ B`. It accepts a typed input, optionally uses memory, reasoning and external tools, and returns a typed output. This library gives developers an idiomatic toolkit to orchestrate AI agents, anchoring the probabilistic outputs of LLMs within the strict determinism of Go:
 
-1. **Minimal** — no hidden magic; every component is explicit and replaceable.
-2. **Typed** — inputs and outputs are Go generics (`A`, `B`); the compiler enforces correctness.
-3. **Composable** — agents are functions; they can be piped, sequenced, or wrapped freely.
+1. **Minimal** — ano hidden magic; every component is explicit and replaceable.
+2. **Typed** — ainputs and outputs are Go types that are declared by the agent (the library uses generics); the compiler enforces correctness.
+3. **Composable** — agents are functions; they can be piped, sequenced, or wrapped freely using Go syntax.
 4. **Interoperable** — works with any LLM provider (AWS Bedrock, OpenAI, LM Studio, …) via the [`chatter`](https://github.com/kshard/chatter) adapter, and with any tool via the [Model Context Protocol](https://modelcontextprotocol.io).
 
-An agent is a side-effect function `ƒ: A ⟼ B`. It accepts a typed input, optionally uses memory and external tools, and returns a typed output. This same signature is preserved at every level of the hierarchy, so simple prompt wrappers and full autonomous runtimes are interchangeable.
+The libray consists of three layers:
+* **Core abstractions** at the root package `github.com/kshard/thinker` defines types and interfaces every component depends on;
+* **Agent toolkit** is ready-to-use types (`agent`, `memory`, `reasoner`, `codec`, `command`) for low-level agent development; 
+* **Nanobot** is (`agent/nanobot`) is the high-level declarative api for build-and-compose production quality AI agents. It is recommened to use `agent/nanobot` abstractions and patterns instead of low-level toolkit.
 
-**References**
+
+
+**Inspired by**
 - [Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/pdf/2304.03442)
 - [REACT : SYNERGIZING REASONING AND ACTING IN LANGUAGE MODELS](https://arxiv.org/pdf/2210.03629)
+- [Exploring Advanced LLM Multi-Agent Systems Based on Blackboard Architecture](https://arxiv.org/abs/2507.01701)
+
+## Why Go for AI?
+
+Most people uses Python (LangChain/AutoGPT) for this...
+
+> "We don't use Go because it's fast; we use Go because it's the language that treats **Logic** with the same rigor that an LLM treats **Language**."
+
+
+### 1. Deterministic Guardrails for Probabilistic Logic
+
+In most AI frameworks, the "glue" between the LLM and the code is as "mushy" as the LLM itself. By modeling agents as $\mathcal{F}: A \to B$, `thinker` uses Go’s type system as a **physical boundary**. You aren't just parsing JSON; you are using the compiler to define the "Phase Space" in which the AI is allowed to operate. If the LLM tries to hallucinate a tool or a field that doesn't exist in your Go struct, the system fails at the type-gate before it can execute an invalid state transition.
+
+
+### 2. The Blackboard and concurrency
+
+Multi-agent systems are fundamentally a **concurrency and coordination problem**, not a "prompting" problem. Python’s `asyncio` and threading model require explicit care when managing shared state. Go’s channels and `sync` primitives allow multiple agents (Goroutines) to read/write to a shared memory space with native safety. In `thinker`, the "Blackboard" isn't a complex design pattern; it’s just idiomatic Go memory management.
+
+
+### 3. Refactorability of Evolving Schemas
+
+AI agents are never "finished." You will constantly change your tool definitions, your state structs, and your prompts. In a dynamic language, changing a deeply nested key in your "Agent State" is a runtime gamble. In `thinker`, because of the **lens-based optics** and strict typing, the compiler performs a full "impact analysis" every time you change your model. If you rename a field in your Blackboard, the compiler identifies every agentto be updated. This is "Industrial Grade" AI development.
+
+
+### 4. The "Context" of Agency
+
+Deep agentic loops often involve long-running I/O, potential infinite loops, and the need for immediate termination. Go’s `context.Context` is the perfect "nervous system" for an agent. It provides a standardized way to propagate cancellations, timeouts, and tracing metadata through a tree of recursive agent calls. Implementing a "Hard Stop" or a "Budget Timeout" across 50 nested LLM calls is a one-liner in Go; in other ecosystems, it requires custom signal-handling logic.
+
+
+### 5. Deployment as an Artifact, Not an Environment
+
+AI agents are increasingly being moved to the "Edge": sidecars, Lambda functions, or embedded CLI tools. Shipping an agent should not require shipping a 2GB Docker image with 400 `pip` dependencies and a specific C++ toolchain for a vector-math library. A `thinker` agent is a **single, static binary**. This dramatically reduces the "Cold Start" problem for serverless agents and simplifies the security audit of the AI's supply chain.
+
+
+| Feature          | The Python Problem                                  | The `thinker` (Go) Solution                        |
+| :--------------- | :-------------------------------------------------- | :------------------------------------------------- |
+| **Tool Safety**  | Runtime "KeyErrors" from LLM hallucinations.        | **Compile-time** enforcement of tool schemas.      |
+| **Coordination** | Global Interpreter Lock (GIL) limits agent scaling. | **Goroutines** allow N-agents to scale natively.   |
+| **Persistence**  | Complex "State" serializers for Blackboards.        | **Lenses & Optics** for zero-copy state injection. |
+| **Execution**    | Heavy, fragile environments.                        | **Single Static Binary** with zero dependencies.   |
+
 
 ## Quick start
 
-**Prerequisites:** Go 1.21+. Access to AWS Bedrock, OpenAI, or LM Studio. See [doc/HOWTO.md](./doc/HOWTO.md) for provider configuration.
+**Prerequisites:** Go 1.25+. Access to AWS Bedrock, OpenAI, or LM Studio. See "Setup" section at [doc/USER-GUIDE.md](./doc/USER-GUIDE.md#setup) for configure LLMs access.
 
 ```bash
 go get github.com/kshard/thinker
 ```
 
-The ["Hello World" example](./examples/01_helloworld/helloworld.go) creates `ƒ: string ⟼ *chatter.Reply` — an agent that produces anagrams:
+An agent is just a state machine where the transitions are decided by an LLM. In the example below (a "Hello World" for agent), the agent transitions from **Thinking** (I need to calculate 15% of 120) to **Acting** (running the calc function) to **Observing** (seeing the result is 18) before finally returning the answer.". See [the complete example](./examples/nanobot/01_helloworld/main.go)
 
 ```go
 package main
 
 import (
-  "context"
-  "fmt"
+	"context"
+	"fmt"
 
-  "github.com/kshard/chatter"
-  "github.com/kshard/chatter/provider/autoconfig"
-  "github.com/kshard/thinker/agent"
+	"github.com/kshard/chatter/provider/autoconfig"
+	"github.com/kshard/thinker/agent/nanobot"
 )
 
-func anagram(expr string) (chatter.Message, error) {
-  var prompt chatter.Prompt
-  prompt.WithTask("Create anagram using the phrase: %s", expr)
-  prompt.WithRules(
-    "Strictly adhere to the following requirements when generating a response.",
-    "The output must be the resulting anagram only.",
+var (
+  // Configure access to LLMs
+  llm = autoconfig.MustFrom(autoconfig.Instance{
+    Name:     "base",
+    Provider: "provider:bedrock/foundation/converse",
+    Model:    "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  })
+
+  // Create nanobot runtime.
+  env = nanobot.NewRuntime(nil, llm)
+
+  // Create the ReAct agent using the prompt file.
+  bot = nanobot.MustReAct[float32, string](env,`data:text/markdown,---
+server:
+  - name: calc
+    url: https://mcp.example.com/
+---
+What is a 15%% tip on a ${{ . }} bill?`,
   )
-  prompt.WithExample("Madam Curie", "Radium came")
-  return &prompt, nil
-}
+)
 
 func main() {
-  llm, err := autoconfig.New("thinker")
-  if err != nil { panic(err) }
+  // Use the agent
+  val, err := bot.Prompt(context.Background(), 120)
+  if err != nil {
+    panic(err)
+  }
 
-  agt := agent.NewPrompter(llm, anagram)
-
-  val, err := agt.Prompt(context.Background(), "a gentleman seating on horse")
-  fmt.Printf("==> %v\n%+v\n", err, val)
+  fmt.Printf("%s\n", val)
 }
 ```
 
-More examples: [examples/](./examples/).
+See examples: 
+* [examples/nanobot](./examples/nanobot/) for high-level abstractions 
+* [examples/toolkit](./examples/toolkit/) for low-level api
 
-## Core abstractions
 
-The root package `github.com/kshard/thinker` defines the interfaces that all components depend on. Higher-level packages (`agent`, `agent/nanobot`) assemble agents from these interfaces; lower-level packages (`memory`, `reasoner`, `codec`, `command`) supply ready-made implementations.
+## High-level abstractions (Nanobot)
 
-### Agent interface
+Bots are autonomous loops orchestrated by language models. The inputs and outputs are controlled by deterministic guradrails written in Go. The Markdown controls the language model behaviour, and which MCP servers to connect. The `agent/nanobot` toolkit provides execution environment, bindings and composable bot patterns that cover the most common use-cases. 
 
-Every agent — regardless of capability level — exposes a single method:
+Markdown document with an optional YAML front-matter block serves as the specification for an agent. 
+```markdown
+---
+name: Classify sentiment          # human-readable label (used in logs)
+runs-on: base                     # LLMs key; falls back to "base"
+retry: 3                          # max retries on error
+debug: false                      # if true, log full LLM dialog to stderr
 
-```go
-Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error)
+schema:
+  input:                          # Optional JSON Schema for the input
+    type: object
+    properties:
+      text: { type: string }
+  reply:                          # JSON Schema for output, mandatory for type-safe output
+    type: array
+    description: list of sentiments
+    items:
+      type: string
+      description: sentiment classes
+
+servers:                          # MCP servers to connect for this prompt only
+  - name: kb
+    url: https://kb.example.com/mcp
+  - name: calc
+    command: [python3, tools/calc.py]
+---
+Analyse the sentiment of the following text and return a JSON object.
+
+Text: {{.Text}}
 ```
 
-The three concrete agent types differ only in which supporting components they assemble:
+**Template variables:** the prompt body is a Go `text/template`. The input value `A` is the dot (`.`). If `A` is a struct, use `{{ .FieldName }}` or `{{ .FuncName }}`; if `A` is a string, use `{{ . }}`.
 
-| Type       | Memory             | Reasoning           | Tool use | Best for                        |
-| ---------- | ------------------ | ------------------- | -------- | ------------------------------- |
-| `Prompter` | none (stateless)   | none                | no       | One-shot prompt → raw LLM reply |
-| `Manifold` | ephemeral per call | delegated to LLM    | yes      | Structured I/O with tool loops  |
-| `Automata` | durable stream     | application-defined | yes      | Multi-step autonomous loops     |
 
-### Encoder and Decoder
+### ReAct[A, B]
 
-`Encoder[A]` converts a Go value of type `A` into an LLM prompt (`chatter.Message`).  
-`Decoder[B]` converts the LLM reply into a typed value `B`, returning a confidence score in `[0, 1]` and optional feedback for the LLM.
+The Reason-and-Act (ReAct) pattern implements a cyclical process of **thinking**, **acting**, and **observing**. This loop continues iteratively until the defined goal is achieved.
 
-```go
-type Encoder[T any] interface {
-    Encode(T) (chatter.Message, error)
-}
+ReAct serves as the **core building block** for enabling agentic behavior. It provides the fundamental mechanism for decision-making and interaction.
 
-type Decoder[T any] interface {
-    // Returns (confidence, result, error).
-    // Return thinker.Feedback(...) as the error to send corrective feedback to the LLM.
-    Decode(*chatter.Reply) (float64, T, error)
-}
-```
-
-The [`codec`](./codec/) package supplies ready-made implementations:
-
-| Symbol                 | Purpose                                                            |
-| ---------------------- | ------------------------------------------------------------------ |
-| `codec.EncoderID`      | Wraps a `string` as a prompt task                                  |
-| `codec.DecoderID`      | Returns the raw `*chatter.Reply` unchanged                         |
-| `codec.String`         | Encodes `string` → prompt; decodes reply → plain `string`          |
-| `codec.FromEncoder(f)` | Lifts `func(A) (chatter.Message, error)` into `Encoder[A]`         |
-| `codec.FromDecoder(f)` | Lifts `func(*chatter.Reply) (float64, B, error)` into `Decoder[B]` |
-
-Use `thinker.Feedback(note, details...)` inside a decoder to send structured corrective feedback back to the LLM. The `Automata` loop routes the feedback to the `Reasoner` for the next `AGENT_REFINE` or `AGENT_RETRY` phase.
-
-### Memory
-
-`Memory` records agent observations and constructs the context window delivered to the LLM on each call.
-
-```go
-type Memory interface {
-    Purge()                                           // discard all state
-    Commit(*Observation)                              // record an observation
-    Context(chatter.Message) []chatter.Message        // build context window
-}
-```
-
-Built-in implementations in the [`memory`](./memory/) package:
-
-| Type                             | Behaviour                                                                       |
-| -------------------------------- | ------------------------------------------------------------------------------- |
-| `memory.NewVoid(stratum)`        | Discards all observations; sends only the system prompt and the current message |
-| `memory.NewStream(cap, stratum)` | Retains observations in chronological order; pass `memory.INFINITE` to keep all |
-
-`stratum` is the system instruction string prepended to every context window (e.g. `"You are an autonomous agent…"`).
-
-### Reasoner
-
-`Reasoner[B]` is the goal-setting component. After each LLM call it inspects the agent's `State[B]` and returns the next execution phase:
-
-```go
-type Reasoner[B any] interface {
-    Purge()
-    Deduct(State[B]) (Phase, chatter.Message, error)
-}
-```
-
-`State[B]` carries the decoded reply, confidence score, epoch counter, and any feedback from the decoder.
-
-| Phase          | Meaning                                                 |
-| -------------- | ------------------------------------------------------- |
-| `AGENT_ASK`    | Issue a new prompt (new sub-goal)                       |
-| `AGENT_RETURN` | Accept the current reply and return it to the caller    |
-| `AGENT_RETRY`  | Retry the last prompt without updating memory           |
-| `AGENT_REFINE` | Resend with a refined prompt that includes LLM feedback |
-| `AGENT_ABORT`  | Halt with an unrecoverable error                        |
-
-Built-in implementations in the [`reasoner`](./reasoner/) package:
-
-| Type                            | Behaviour                                         |
-| ------------------------------- | ------------------------------------------------- |
-| `reasoner.NewVoid[B]()`         | Always returns `AGENT_RETURN`; one-shot behaviour |
-| `reasoner.From(f)`              | Lifts any function into `Reasoner[B]`             |
-| `reasoner.NewEpoch(max, inner)` | Decorator that aborts after `max` iterations      |
-
-### Registry — MCP tools
-
-`Registry` wraps one or more [Model Context Protocol](https://modelcontextprotocol.io) servers and exposes their tools to the agent loop.
-
-```go
-type Registry interface {
-    Context() chatter.Registry                              // tool schema injected into the LLM prompt
-    Invoke(*chatter.Reply) (Phase, chatter.Message, error)  // dispatch a tool call
-}
-```
-
-The [`command`](./command/) package provides `*command.Registry`:
-
-```go
-registry := command.NewRegistry()
-registry.ConnectCmd("fs",  []string{"my-mcp-server", "--flag"})  // stdio transport
-registry.ConnectUrl("web", "https://mcp.example.com/sse")        // SSE transport
-registry.Attach("local", myServerSession)                        // pre-connected session
-```
-
-Tool names are namespaced with the server ID using `_` as separator (e.g. `fs_read`) to satisfy provider constraints such as AWS Bedrock's `[a-zA-Z0-9_-]` requirement.
-
-## Agentic toolkit
-
-The [`agent`](./agent/) package assembles the core interfaces into three ready-to-use agent types.
-
-### Prompter
-
-`Prompter[A]` is the simplest agent: stateless, memoryless, one prompt → raw LLM reply. Internally it wires `Automata` with `memory.Void` and `reasoner.Void`.
-
-```go
-agt := agent.NewPrompter(llm, func(input MyInput) (chatter.Message, error) {
-    var p chatter.Prompt
-    p.WithTask("Summarize: %v", input)
-    return &p, nil
-})
-
-reply, err := agt.Prompt(ctx, myValue)
-// reply is *chatter.Reply
-```
-
-### Manifold
-
-`Manifold[A, B]` runs a tool-use loop driven entirely by the LLM. On each iteration the LLM either returns a final reply or issues a tool-call; the registry executes the tool and feeds the result back. Output is decoded into type `B` by the provided `Decoder`.
-
-```go
-registry := command.NewRegistry()
-registry.Attach("os", mcpSession)
-
-agt := agent.NewManifold(
-    llm,
-    codec.FromEncoder(myEncoder),
-    codec.String,   // decoder produces string
-    registry,
-)
-
-result, err := agt.Prompt(ctx, "run the workflow")
-```
-
-`Manifold` requires a model with reliable tool-use support. See [AWS Bedrock supported models](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html).
-
-```mermaid
-%%{init: {'theme':'neutral'}}%%
-graph TD
-    subgraph Interface
-    A[Type A]
-    B[Type B]
-    end
-    subgraph Commands
-    C[MCP Server]
-    end
-    subgraph Agent
-    A --"01|input"--> E[Encoder]
-    E --"02|prompt"--> G((Manifold))
-    G --"03|eval"--> L[LLM]
-    G -."04|exec".-> C
-    C -."05|result".-> G
-    G --"06|reply"--> D[Decoder]
-    D --"07|answer"--> B
-    end
-```
-
-### Automata
-
-`Automata[A, B]` is the full agent runtime. Memory, reasoning, and tool use are all under application control.
-
-```go
-agt := agent.NewAutomata(
-    llm,
-    memory.NewStream(memory.INFINITE, "You are an autonomous agent."),
-    codec.FromEncoder(myEncoder),
-    codec.FromDecoder(myDecoder),
-    reasoner.NewEpoch(5, reasoner.From(myDeductFn)),
-)
-```
-
-The main loop:
-1. Encode input → build context window from memory → call LLM.
-2. Decode the reply (may produce structured feedback).
-3. Commit the observation to memory.
-4. Call `Reasoner.Deduct` → get next phase.
-5. Repeat or return.
+All other patterns are **convenience abstractions** built on top of ReAct, composing and orchestrating ReAct-based agents in various ways to support more complex behaviors. Their primary purpose is to support a **declarative approach** to agent definition. While it is possible to implement the same logic imperatively using only Go and ReAct, doing so typically results in significant boilerplate code.
 
 ```mermaid
 %%{init: {'theme':'neutral'}}%%
@@ -335,228 +229,60 @@ graph TD
     subgraph Memory
     S[Stream]
     end
+    subgraph Commands
+    C[MCP Server]
+    end
     subgraph Agent
     A --"01|input"--> E[Encoder]
-    E --"02|prompt"--> G((Automata))
+    E --"02|prompt"--> G((Agent))
     G --"03|eval"--> L[LLM]
     G --"04|reply"--> D[Decoder]
-    G <--"05|observations"--> S
-    G --"06|deduct"--> R[Reasoner]
-    R --"07|new goal"--> G
-    D --"08|answer"--> B
+    D -."05|exec".-> C
+    C -."06|result".-> G
+    G <--"07|observations" --> S
+    G --"08|deduct"--> R[Reasoner]
+    R <-."09|reflect".-> S
+    R --"10|new goal"--> G
+    D --"11|answer" --> B
     end
 ```
 
-Call `agt.PromptOnce(ctx, input)` to purge memory and reasoner state before each invocation (isolated sessions).
+### ThinkReAct[S, A, B]
 
-## Agent development with nanobot
+Plan-and-Execute pattern implements two phase flow where the agent first plans a sequence of actions based on the current state and then executes those actions, potentially updating the state after each action.
 
-The [`agent/nanobot`](./agent/nanobot/) package provides a higher-level workflow toolkit built on top of `Automata` and `Manifold`. It introduces file-based prompt templates and five composable multi-bot patterns.
+### Reflect[S, A, B]
 
-### Runtime
+Reflect implements judge-then-correct loop. A judge bot evaluates the current state. On rejection, a react bot corrects the state, and the review loop retries.
 
-`Runtime` is the shared execution environment threaded through every nanobot constructor. It bundles:
-- `FileSystem` — `fs.FS` root for prompt template files
-- `LLMs` — registry of named `chatter.Chatter` instances (`Model(name) (chatter.Chatter, bool)`)
-- `Registry` — optional `*command.Registry` for tool dispatch
-- `Chalk` — optional progress-reporting sink (terminal, log, no-op default)
+### Seq[S, A, B]
 
-```go
-rt := nanobot.NewRuntime(os.DirFS("prompts"), llms)
-rt = rt.WithRegistry(registry)  // attach MCP tools
-rt = rt.WithStdout(chalk)       // attach progress reporter
-```
+Chains two bots over a shared blackboard state. The intermediate result of the first bot is merged into the blackboard and then second bot returns the final output.
 
-Use `"base"` as the canonical fallback model name in `LLMs`. Every nanobot constructor falls back to `"base"` when no model-specific entry is found.
+### Blackboard pattern
 
-### ReAct
+At first glance, the framework’s type system and composition model may appear to enforce a strict hierarchy, encouraging linear thinking and limiting the ability to address non-linear problems. However, this is not the case.
 
-`ReAct[A, B]` loads a Markdown prompt template from the runtime's file system and drives a `Manifold` tool-use loop. The YAML front-matter in the prompt file controls the model, retry budget, output format, and which MCP servers to connect.
+Applications should introduce a “**blackboard**” — a shared state that enables agents to exchange information freely. This shared context allows for unexpected connections and interactions, often leading to emergent behavior and breakthrough insights. It is a type for shared state:
 
-```go
-bot, err := nanobot.NewReAct[MyInput, MyOutput](rt, "classify.md")
-// or panic variant:
-bot := nanobot.MustReAct[MyInput, MyOutput](rt, "classify.md")
+```golang
+type State struct { /* ... */}
 
-result, err := bot.Prompt(ctx, input)
-```
-
-Prompt file format (Markdown with YAML front-matter):
-
-```markdown
----
-name: Classify document
-runs-on: base
-retry: 3
-servers:
-  - type: url
-    name: search
-    url: https://mcp.example.com/sse
-  - type: cmd
-    name: fs
-    command: [my-mcp-server, --flag]
-schema:
-  reply:
-    type: object
-    properties:
-      category: { type: string }
----
-Classify the following document into one of the categories: {{.Categories}}.
-
-Document:
-{{.Text}}
-```
-
-If `B` implements `encoding.TextUnmarshaler`, the decoder automatically parses JSON from the LLM reply into `B`.
-
-### Seq
-
-`Seq[S, A, B]` pipelines two bots over a shared blackboard state `S`. Bot `a` runs first; its output `A` is merged into `S` via an `apply` function; an optional `effect` runs; then bot `b` receives the updated `S`.
-
-```
-Seq : (S → A) ∘ apply(S, A → S) ∘ effect(S) ∘ (S → B)
-```
-
-```go
-seq := nanobot.MustSeq(rt, botA, botB)
-// optional: override the default lens-based merge
-seq = seq.WithApply(func(s State, a StepResult) State { s.Step = a; return s })
-// optional: side-effect between steps
-seq = seq.WithEffect(func(ctx context.Context, s State) (State, error) {
-    return s, nil
-})
-
-result, err := seq.Prompt(ctx, initialState)
-```
-
-The default `apply` uses a type-derived lens: when `S` has exactly one field of type `A`, the lens is resolved automatically.
-
-### ThinkReAct
-
-`ThinkReAct[S, A, B]` separates planning from execution. A `think` bot produces a task list `[]A`; a `react` bot executes each task independently, receiving the state `S` updated with the current task.
-
-```
-ThinkReAct : (S → []A) ∘ apply(S, A → S) ∘ effect(S) ∘ (S → B) for each A
-```
-
-```go
-pte := nanobot.MustThinkReAct(rt, plannerBot, executorBot)
-pte = pte.WithApply(func(s State, task Task) State { s.Current = task; return s })
-
-results, err := pte.Prompt(ctx, initialState)
-// returns []B — one result per planned task
-```
-
-Progress is reported to `Runtime.Chalk` for each task.
-
-### Reflect
-
-`Reflect[S, A, B]` implements a judge-then-correct loop. A `judge` bot evaluates the current state; the `accept` function decides whether to accept the verdict. On rejection, a `react` bot corrects the state, and the loop retries up to `attempts` times.
-
-```
-Reflect : judge(S → A) ∘ accept(S, A → S, int) ∘ [react(S → B) ∘ apply(S, B → S) ∘ effect(S)]*
-```
-
-`accept` returns `(S, positive int)` to accept; `(S, negative int)` to reject with feedback embedded in the returned `S`.
-
-```go
-loop := nanobot.MustReflect(rt, judgeBot, correctorBot)
-loop = loop.WithAccept(func(s State, v Verdict) (State, int) {
-    if v.OK { return s, 1 }
-    s.Feedback = v.Reason
-    return s, -1
-})
-loop = loop.WithAttempts(3)
-
-result, err := loop.Prompt(ctx, state)
-```
-
-### Jsonify
-
-`Jsonify[A]` is a specialised `Automata`-backed bot that forces LLM output to be a valid JSON array of strings, with automatic retry and application-defined validation.
-
-```go
-bot := nanobot.NewJsonify(
-    llm,
-    4, // max attempts
-    codec.FromEncoder(myEncoder),
-    func(seq []string) error {
-        if len(seq) == 0 { return errors.New("empty list") }
-        return nil
-    },
+var (
+  botA = nanobot.MustReAct[State, string](/* ... */)
+  botB = nanobot.MustReAct[State, string](/* ... */)
+  botC = nanobot.MustReAct[State, string](/* ... */)
 )
-
-items, err := bot.Prompt(ctx, input)
-// items is []string
 ```
 
-See the [rainbow example](./examples/02_rainbow/rainbow.go) for a `Jsonify` agent that uses feedback to guide the LLM toward the correct answer across multiple attempts.
+## Commands, Tools and MCP Servers
 
-## Agent composition
+The library support only [Model-Context-Protocol](https://modelcontextprotocol.io/specification/2025-06-18) using [the official Golang SDK](https://github.com/modelcontextprotocol/go-sdk) over multiple transport protocols (i) in-memory for native Golang integration, (ii) stdio and (iii) http(s), https + oauth 2.0 and https + aws iam.  
 
-Every agent satisfies `Bot[S, A]` — `Prompt(ctx, S) (A, error)`. Compose with plain Go:
 
-```go
-// Sequential pipeline
-result1, err := agentA.Prompt(ctx, input)
-if err != nil { return err }
-result2, err := agentB.Prompt(ctx, result1)
+## Composition
 
-// Fan-out
-var wg sync.WaitGroup
-for _, item := range tasks {
-    wg.Add(1)
-    go func(item Task) {
-        defer wg.Done()
-        worker.Prompt(ctx, item)
-    }(item)
-}
-wg.Wait()
-```
-
-For shared state across encoder, decoder, and reasoner, use a struct with receiver methods:
-
-```go
-type MyAgent struct {
-    SharedData string
-    *agent.Automata[string, string]
-}
-
-func (a *MyAgent) Encode(input string) (chatter.Message, error)       { /* use a.SharedData */ }
-func (a *MyAgent) Decode(reply *chatter.Reply) (float64, string, error) { /* ... */ }
-func (a *MyAgent) Deduct(s thinker.State[string]) (thinker.Phase, chatter.Message, error) { /* ... */ }
-```
-
-**Examples:**
-- [Chain](./examples/05_chain/chain.go) — sequential two-agent pipeline
-- [Text processor](./examples/06_text_processor/processor.go) — chaining with file I/O
-- [AWS Step Functions](./examples/07_aws_sfs/main.go) — distributed chaining
-
-## FAQ
-
-<details>
-<summary>Do agents support concurrent execution?</summary>
-
-A single agent instance is sequential by design. The inner loop requires each step to depend on the previous LLM reply to maintain causal coherence. `memory.Stream` is thread-safe and can be shared across a pipeline, but is not designed for multiple isolated sessions within one instance.
-
-To run tasks concurrently, create one agent instance per goroutine, or build a worker pool over a shared pool of LLM clients.
-</details>
-
-<details>
-<summary>How to deploy agents to AWS?</summary>
-
-AWS Step Functions is the recommended approach for chaining agents in a serverless setting — it handles retries, state persistence, and fan-out natively. Consider the [typestep library](https://github.com/fogfish/typestep) for a type-safe Go DSL for Step Functions.
-
-See the [AWS Step Functions example](./examples/07_aws_sfs/main.go) for a working pattern.
-</details>
-
-<details>
-<summary>Which LLM providers are supported?</summary>
-
-Any provider that implements `chatter.Chatter`. Built-in adapters in [`chatter`](https://github.com/kshard/chatter): AWS Bedrock (Converse API), OpenAI-compatible endpoints (OpenAI, LM Studio, and compatible local servers). See [doc/HOWTO.md](./doc/HOWTO.md) for configuration.
-
-Tool use (`Manifold`, `ReAct`) requires a model with reliable function-calling support.
-</details>
+Beyond the patterns exposed through high-level APIs, the library does not provide built-in mechanisms for chaining or composing agents. Instead, it encourages the use of **idiomatic Go**, such as functional composition and channels, to build flexible and explicit orchestration logic.
 
 ## Contributing
 
