@@ -94,7 +94,7 @@ func main() {
 	// chaining agents using pure Go
 	for _, who := range []string{"Cat", "Dog", "Cow", "Pig"} {
 		// Use agent to transform animal input into story
-		story, err := agtA.PromptOnce(context.Background(), who)
+		story, err := agtA.Prompt(context.Background(), who)
 		if err != nil {
 			panic(err)
 		}

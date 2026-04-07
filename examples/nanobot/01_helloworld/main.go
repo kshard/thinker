@@ -37,7 +37,7 @@ var (
 		)
 
 	// Create the ReAct agent using the prompt file.
-	bot = nanobot.MustReAct[X, string](env,
+	bot = nanobot.MustReAct[float32, string](env,
 		"data:text/markdown,What is a 15%% tip on a ${{ . }} bill?",
 	)
 )
