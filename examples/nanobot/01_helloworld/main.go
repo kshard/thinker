@@ -31,9 +31,7 @@ var (
 		WithRegistry(
 			// This example uses native MCP server, but in the real app external
 			// one would be used, which is automatically discovered by bots itself.
-			command.NewRegistry().WithNative(
-				command.From(&mcp.Tool{Name: "mul", Description: "multiply two numbers"}, mul),
-			),
+			command.NewRegistry().WithNative("calc", fMul),
 		)
 
 	// Create the ReAct agent using the prompt file.
@@ -59,6 +57,8 @@ func main() {
 //
 // For simplicity, we define it inline here.
 //
+
+var fMul = command.From(&mcp.Tool{Name: "mul", Description: "multiply two numbers"}, mul)
 
 type input struct {
 	A float32 `json:"a" jsonschema:"number a"`
