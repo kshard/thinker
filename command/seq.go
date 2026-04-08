@@ -70,8 +70,8 @@ func (r *SeqRegistry) Invoke(reply *chatter.Reply) (phase thinker.Phase, msg cha
 		var exists bool
 		for _, reg := range r.regs {
 			srv, exists = reg.servers[id]
-			if !exists {
-				continue
+			if exists {
+				break
 			}
 		}
 		if !exists {
