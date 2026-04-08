@@ -34,6 +34,10 @@ func NewSeqRegistry() *SeqRegistry {
 }
 
 func (r *SeqRegistry) Bind(reg *Registry) {
+	if reg == nil {
+		return
+	}
+
 	r.regs = append(r.regs, reg)
 }
 
