@@ -32,15 +32,16 @@ func (n *native[A, B]) Bind(srv *mcp.Server) { mcp.AddTool(srv, n.spec, n.f) }
 func (n *native[A, B]) Spec() *mcp.Tool      { return n.spec }
 
 // Connect native function as a tool to the registry with the given id.
-func (r *Registry) WithNative(f Native) *Registry {
+func (r *Registry) WithNative(id string, fs ...Native) *Registry {
 	// TODO: implement connection closing
 
-	spec := f.Spec()
-	srv := mcp.NewServer(&mcp.Implementation{Name: spec.Name, Version: "v0.0.0"}, nil)
-	f.Bind(srv)
+	srv := mcp.NewServer(&mcp.Implementation{Name: id, Version: "v0.0.0"}, nil)
+	for _, f := range fs {
+		f.Bind(srv)
+	}
 
 	cli := mcp.NewClient(
-		&mcp.Implementation{Name: "api_" + spec.Name, Version: "v0.0.0"},
+		&mcp.Implementation{Name: "api_" + id, Version: "v0.0.0"},
 		&mcp.ClientOptions{},
 	)
 
@@ -53,7 +54,7 @@ func (r *Registry) WithNative(f Native) *Registry {
 		panic(err)
 	}
 
-	err = r.Attach(spec.Name, api)
+	err = r.Attach(id, api)
 	if err != nil {
 		panic(err)
 	}
