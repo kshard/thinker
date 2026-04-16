@@ -15,131 +15,167 @@ import (
 	"github.com/kshard/chatter"
 )
 
-// Reflect implements a guard/review loop that forces a "Review" state before
-// a "Done" transition (Reflection or Guard Loop). Content is assumed to be
-// produced upstream and arrives as the initial state S. The judge bot evaluates
-// S first; if the review function signals acceptance the loop returns the
-// (optionally enriched) state. Otherwise, the review function also returns the
-// feedback-enriched state S' which is passed to the react bot (corrector), and
-// the loop retries, up to attempts times.
+// Vote is the result type for the judge bot in BotReflect. It carries both
+// the updated blackboard S — with any feedback from the judge injected — and
+// the accept/reject decision signal.
 //
-//	Reflect : (S -> A) ∘ review(S,A)→(S,int) ∘ (S -> B) ∘ (S, B -> S) ∘ (S -> S) ∘ retry
+// Build a Bot[S, Vote[S]] from an ordinary Bot[S, A] using Accept:
 //
-// The review function (S, A) -> (S, int) combines acceptance check and feedback
-// in a single call. Returning a positive int means the verdict is accepted and the returned
-// S is the final output. Returning a negative int means the returned S carries the judge's
-// critique so the corrector can act on it.
-// The default review always accepts and returns S unchanged.
+//	Accept(judge, Eff[Vote[S], A]{
+//	    Eval: func(_ context.Context, v Vote[S]) (Vote[S], error) {
+//	        v.Accepted = signal(v.State)
+//	        return v, nil
+//	    },
+//	})
 //
-// The apply function (S, B -> S) merges the corrector output B into state S.
-// The default apply is a Lens[S, B].
+// where signal is +1 (accept), 0 (retry), or -1 (hard reject).
+type Vote[S any] struct {
+	// State is the blackboard updated with the judge's feedback. On a neutral
+	// verdict (Accepted == 0) this state — carrying the critique — is forwarded
+	// to the corrector so it knows why the previous attempt was rejected.
+	State S
+
+	// Accepted is the decision signal produced by the judge:
+	//   +1  accept  — State is returned as the final blackboard.
+	//    0  retry   — State carries critique; the corrector runs next.
+	//   -1  reject  — hard reject; error is returned immediately.
+	accepted int
+}
+
+func (v *Vote[S]) Accept() { v.accepted = 1 }
+func (v *Vote[S]) Reject() { v.accepted = -1 }
+func (v *Vote[S]) Revise() { v.accepted = 0 }
+
+type botAccept[S, A any] struct {
+	bot  Bot[S, A]
+	lens func(Vote[S], A) Vote[S]
+	eval Eval[Vote[S]]
+}
+
+func (m *botAccept[S, A]) Prompt(ctx context.Context, s S, opt ...chatter.Opt) (Vote[S], error) {
+	a, err := m.bot.Prompt(ctx, s, opt...)
+	if err != nil {
+		return Vote[S]{}, err
+	}
+	return m.eval(ctx, m.lens(Vote[S]{State: s}, a))
+}
+
+// Judge lifts Bot[S, A] into Bot[S, Vote[S]] using Eff[Vote[S], A] — the
+// same bundle used by Arrow, instantiated at the product type Vote[S]:
 //
-// The effect function (S -> S) captures side effects after each correction step.
-// The default effect is the identity function.
-type Reflect[S, A, B any] struct {
-	judge    Bot[S, A]
-	react    Bot[S, B]
-	accept   func(S, A) (S, int)
-	apply    func(S, B) S
-	effect   func(context.Context, S) (S, error)
+//   - eff.Lens injects A into Vote[S]. The default is the composed lens
+//     Vote[S].State ∘ forProduct1[S, A], which writes A into the S field of
+//     Vote and leaves Vote.Accepted at its zero value.
+//   - eff.Eval sets Vote.Accepted (+1 accept, 0 retry, -1 reject). The default
+//     is always-accept (+1).
+//
+// Denotation:
+//
+//	Judge(bot, eff) : s ↦ eff.Eval(eff.Lens(Vote[S]{State: s}, bot.Prompt(s)))
+func Judge[S, A any](b Bot[S, A], eff ...Eff[Vote[S], A]) Bot[S, Vote[S]] {
+	var lens func(Vote[S], A) Vote[S]
+	var eval Eval[Vote[S]]
+
+	if len(eff) > 0 {
+		lens = eff[0].Lens
+		eval = eff[0].Eval
+	}
+	if lens == nil {
+		l := mustLens[S, A]()
+		lens = func(v Vote[S], a A) Vote[S] {
+			v.State = l.Put(v.State, a)
+			return v
+		}
+	}
+	if eval == nil {
+		eval = func(_ context.Context, v Vote[S]) (Vote[S], error) {
+			v.accepted = 1
+			return v, nil
+		}
+	}
+
+	return &botAccept[S, A]{bot: b, lens: lens, eval: eval}
+}
+
+// BotReflect implements a guard/review loop that forces a "Review" state before
+// a "Done" transition (reflection or guard loop). Content arrives as the initial
+// state S. The judge bot evaluates S and returns a Verdict[S] that combines
+// the accept/reject signal with the state updated to include any judge feedback.
+// On acceptance the Verdict.State is returned. On a neutral verdict the correct
+// Arr[S] is invoked on Verdict.State and the loop retries, up to attempts times.
+//
+//	BotReflect : (S → Verdict[S]) ∘ correct(S ⇝ S) ∘ retry
+//
+// correct is an Arr[S] (Kleisli endomorphism S ⇝ S) that carries its own
+// Lens setter and Eval side-effect, constructed via Arrow.
+//
+// The judge Bot[S, Verdict[S]] is typically built from a raw Bot[S, A] via Map.
+type BotReflect[S any] struct {
+	judge    Bot[S, Vote[S]]
+	correct  Arr[S]
 	attempts int
 	chalk    Chalk
 }
 
-// MustReflect is like NewReflect but panics on error.
-func MustReflect[S, A, B any](rt *Runtime, judge Bot[S, A], react Bot[S, B]) *Reflect[S, A, B] {
-	reflect, err := NewReflect(rt, judge, react)
+// Reflect creates a BotReflect. Panics on error.
+func Reflect[S any](rt *Runtime, judge Bot[S, Vote[S]], correct Arr[S]) *BotReflect[S] {
+	bot, err := NewReflect(rt, judge, correct)
 	if err != nil {
 		panic(err)
 	}
-	return reflect
+	return bot
 }
 
-// NewReflect creates a Reflect agent that uses judge to evaluate state S
-// and react to correct it when the judge rejects. The default accept
-// function always accepts, and the default apply is a type-derived lens.
-func NewReflect[S, A, B any](rt *Runtime, judge Bot[S, A], react Bot[S, B]) (*Reflect[S, A, B], error) {
-	return &Reflect[S, A, B]{
-		react:    react,
+// NewReflect creates a BotReflect that uses judge to evaluate state S and
+// correct to fix it on rejection. The default attempt count is 1.
+func NewReflect[S any](rt *Runtime, judge Bot[S, Vote[S]], correct Arr[S]) (*BotReflect[S], error) {
+	return &BotReflect[S]{
 		judge:    judge,
-		accept:   func(s S, _ A) (S, int) { return s, 1 },
-		apply:    mustApply[S, B]().Put,
-		effect:   func(ctx context.Context, s S) (S, error) { return s, nil },
+		correct:  correct,
 		attempts: 1,
 		chalk:    rt.Chalk,
 	}, nil
 }
 
-// WithAccept sets the combined acceptance-and-feedback function. It receives the
-// current state S and the judge's verdict A. Return (s, positive int) to accept — s is
-// the final output. Return (s, negative int) to reject — s carries the critique so the
-// corrector (react) knows why it was rejected.
-func (bot *Reflect[S, A, B]) WithAccept(accept func(S, A) (S, int)) *Reflect[S, A, B] {
-	bot.accept = accept
-	return bot
-}
-
-// WithApply overrides the default lens-based merge with a custom function
-// that folds the corrector's output B into state S after each rejection.
-func (bot *Reflect[S, A, B]) WithApply(apply func(S, B) S) *Reflect[S, A, B] {
-	bot.apply = apply
-	return bot
-}
-
-// WithEffect registers a side-effect function that runs after each
-// correction step, for example to persist intermediate state or enforce
-// invariants before the next judge evaluation.
-func (bot *Reflect[S, A, B]) WithEffect(effect func(context.Context, S) (S, error)) *Reflect[S, A, B] {
-	bot.effect = effect
-	return bot
-}
-
 // WithAttempts sets the maximum number of judge→correct iterations.
-func (bot *Reflect[S, A, B]) WithAttempts(attempts int) *Reflect[S, A, B] {
+func (bot *BotReflect[S]) WithAttempts(attempts int) *BotReflect[S] {
 	bot.attempts = attempts
 	return bot
 }
 
 // Prompt runs the reflection loop. The judge evaluates the current state on
-// every iteration; if accepted the final state is returned, if rejected the
-// react bot corrects it and the loop retries. An error is returned if the
-// state is still rejected after all attempts are exhausted.
-func (bot *Reflect[S, A, B]) Prompt(ctx context.Context, input S, opt ...chatter.Opt) (S, error) {
+// every iteration. On acceptance Verdict.State is returned. On a neutral
+// verdict Verdict.State (carrying the judge's critique) is forwarded to the
+// correct arrow and the loop retries. An error is returned on a hard reject
+// or when the retry budget is exhausted.
+func (bot *BotReflect[S]) Prompt(ctx context.Context, input S, opt ...chatter.Opt) (S, error) {
 	bot.chalk.Task(ctx, "Reflect (%d attempts)", bot.attempts)
 
 	s := input
 	for i := range bot.attempts {
 		bot.chalk.Task(bot.chalk.Sub(ctx), "attempt %d of %d", i+1, bot.attempts)
 
-		b, err := bot.judge.Prompt(bot.chalk.Sub(ctx), s, opt...)
+		v, err := bot.judge.Prompt(bot.chalk.Sub(ctx), s, opt...)
 		if err != nil {
 			bot.chalk.Fail(err)
 			return *new(S), err
 		}
 
-		s, accepted := bot.accept(s, b)
 		switch {
-		case accepted > 0:
+		case v.accepted > 0:
 			bot.chalk.Done()
 			bot.chalk.Done()
-			return s, nil
+			return v.State, nil
 
-		case accepted < 0:
+		case v.accepted < 0:
 			bot.chalk.Done()
 			err := fmt.Errorf("rejected")
 			bot.chalk.Fail(err)
-			return s, err
+			return v.State, err
 		}
 
-		a, err := bot.react.Prompt(bot.chalk.Sub(ctx), s, opt...)
-		if err != nil {
-			bot.chalk.Done()
-			bot.chalk.Fail(err)
-			return s, err
-		}
-
-		s = bot.apply(s, a)
-		s, err = bot.effect(ctx, s)
+		// neutral: v.State carries the critique — forward to corrector
+		s, err = bot.correct(bot.chalk.Sub(ctx), v.State, opt...)
 		if err != nil {
 			bot.chalk.Done()
 			bot.chalk.Fail(err)
