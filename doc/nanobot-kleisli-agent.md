@@ -12,7 +12,7 @@ categorical account of that intuition. We show that every agent
 behaviour — sequential composition, reflective self-correction, and plan-then-execute 
 — can be expressed as a morphism in the **Kleisli category** of
 the combined error-and-state monad. The resulting algebra has a single primitive morphism ($\text{ReAct}$),
-three bridging concepts ($	ext{Arr}$, $	ext{Arrow}$, $	ext{Eff}$),
+three bridging concepts ($\text{Arr}$, $\text{Arrow}$, $\text{Eff}$),
 and three structural combinators ($\text{Seq}$, $\text{Reflect}$,
 $\text{ThinkReAct}$) that correspond directly to well-known patterns in
 multi-agent system design.
