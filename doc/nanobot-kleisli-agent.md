@@ -629,7 +629,6 @@ composition $(\bullet)$:*
 These guarantee that output transformations compose predictably and that
 $\text{Map}(b, f)$ does not re-execute the bot.
 
----
 
 ## 7. Comparison with Existing Frameworks
 
