@@ -11,6 +11,7 @@ package nanobot
 import (
 	"context"
 	"io/fs"
+	"reflect"
 
 	"github.com/fogfish/golem/optics"
 	"github.com/kshard/chatter"
@@ -261,12 +262,23 @@ func Lift[S any](eval Eval[S]) Arr[S] {
 
 type lens[S, A any] struct {
 	l optics.Lens[S, A]
+	s bool
 }
 
 func mustLens[S, A any]() lens[S, A] {
-	return lens[S, A]{l: optics.ForProduct1[S, A]()}
+	if reflect.TypeOf((*S)(nil)) == reflect.TypeOf((*A)(nil)) {
+		return lens[S, A]{s: true}
+	}
+
+	return lens[S, A]{
+		l: optics.ForProduct1[S, A](),
+	}
 }
 
 func (f lens[S, A]) Put(s S, a A) S {
+	if f.s {
+		return s
+	}
+
 	return *f.l.Put(&s, a)
 }
