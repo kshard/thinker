@@ -69,7 +69,6 @@ The libray consists of three layers:
 * **Nanobot** is (`agent/nanobot`) is the high-level declarative api for build-and-compose production quality AI agents. It is recommened to use `agent/nanobot` abstractions and patterns instead of low-level toolkit.
 
 
-
 **Inspired by**
 - [Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/pdf/2304.03442)
 - [REACT : SYNERGIZING REASONING AND ACTING IN LANGUAGE MODELS](https://arxiv.org/pdf/2210.03629)
@@ -148,7 +147,7 @@ var (
   env = nanobot.NewRuntime(nil, llm)
 
   // Create the ReAct agent using the prompt file.
-  bot = nanobot.MustReAct[float32, string](env,`data:text/markdown,---
+  bot = nanobot.ReAct[float32, string](env,`data:text/markdown,---
 server:
   - name: calc
     url: https://mcp.example.com/
@@ -176,6 +175,8 @@ See examples:
 ## High-level abstractions (Nanobot)
 
 Bots are autonomous loops orchestrated by language models. The inputs and outputs are controlled by deterministic guradrails written in Go. The Markdown controls the language model behaviour, and which MCP servers to connect. The `agent/nanobot` toolkit provides execution environment, bindings and composable bot patterns that cover the most common use-cases. 
+
+The design behind a high-level api is formally defined by [A Kleisli Category Model of AI Agent Behavior](./doc/Kleisli-Cat-AI-Agent-Behavior.pdf)
 
 Markdown document with an optional YAML front-matter block serves as the specification for an agent. 
 ```markdown
@@ -269,9 +270,9 @@ Applications should introduce a “**blackboard**” — a shared state that ena
 type State struct { /* ... */}
 
 var (
-  botA = nanobot.MustReAct[State, string](/* ... */)
-  botB = nanobot.MustReAct[State, string](/* ... */)
-  botC = nanobot.MustReAct[State, string](/* ... */)
+  botA = nanobot.ReAct[State, string](/* ... */)
+  botB = nanobot.ReAct[State, string](/* ... */)
+  botC = nanobot.ReAct[State, string](/* ... */)
 )
 ```
 

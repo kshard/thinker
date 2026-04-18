@@ -28,12 +28,12 @@ import (
 	"github.com/kshard/thinker/prompt/jsonify"
 )
 
-// ReAct is a prompt-file-driven agent that implements the
+// BotReAct is a prompt-file-driven agent that implements the
 // Reason-and-Act pattern via a Manifold loop. It loads a prompt template
 // from the file system, selects the appropriate LLM from the runtime, wires
 // up any MCP tool servers declared in the prompt file, and exposes a single
-// Prompt method that drives the full ReAct cycle.
-type ReAct[A, B any] struct {
+// Prompt method that drives the full BotReAct cycle.
+type BotReAct[A, B any] struct {
 	manifold *agent.Manifold[A, B]
 	attempt  int
 	external bool
@@ -44,8 +44,8 @@ type ReAct[A, B any] struct {
 	chalk    Chalk
 }
 
-// MustReAct is like NewReAct but panics on error.
-func MustReAct[A, B any](rt *Runtime, file string) *ReAct[A, B] {
+// ReAct is like NewReAct but panics on error.
+func ReAct[A, B any](rt *Runtime, file string) *BotReAct[A, B] {
 	bot, err := NewReAct[A, B](rt, file)
 	if err != nil {
 		panic(err)
@@ -57,7 +57,7 @@ func MustReAct[A, B any](rt *Runtime, file string) *ReAct[A, B] {
 // within the runtime's file system. The prompt file's front-matter controls
 // the model name, output format, retry budget, and any tool servers to
 // connect.
-func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
+func NewReAct[A, B any](rt *Runtime, file string) (*BotReAct[A, B], error) {
 	prompt, err := prompt.ParseFile(rt.FileSystem, file)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
 		runner = aio.NewJsonLogger(os.Stderr, runner)
 	}
 
-	bot := &ReAct[A, B]{prompt: prompt, t: t, chalk: rt.Chalk}
+	bot := &BotReAct[A, B]{prompt: prompt, t: t, chalk: rt.Chalk}
 	if len(bot.prompt.Name) == 0 {
 		bot.chalk = devnull{}
 	}
@@ -120,13 +120,13 @@ func NewReAct[A, B any](rt *Runtime, file string) (*ReAct[A, B], error) {
 	return bot, nil
 }
 
-func (bot *ReAct[A, B]) WithMemory(memory thinker.Memory) *ReAct[A, B] {
+func (bot *BotReAct[A, B]) WithMemory(memory thinker.Memory) *BotReAct[A, B] {
 	bot.memory, bot.external = memory, true
 	bot.manifold = bot.manifold.WithMemory(memory)
 	return bot
 }
 
-func (bot *ReAct[A, B]) WithRegistry(r *command.Registry) *ReAct[A, B] {
+func (bot *BotReAct[A, B]) WithRegistry(r *command.Registry) *BotReAct[A, B] {
 	bot.registry.Bind(r)
 	return bot
 }
@@ -135,7 +135,7 @@ func (bot *ReAct[A, B]) WithRegistry(r *command.Registry) *ReAct[A, B] {
 // ReAct loop until the model returns a final answer, and decodes the result
 // into B. Progress is reported via the Chalk sink when the prompt file
 // declares a name.
-func (bot *ReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
+func (bot *BotReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt) (B, error) {
 	if !bot.external {
 		bot.memory.Reset()
 	}
@@ -156,7 +156,7 @@ func (bot *ReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.Opt)
 	return val, nil
 }
 
-func (bot *ReAct[A, B]) encode(in A) (chatter.Message, error) {
+func (bot *BotReAct[A, B]) encode(in A) (chatter.Message, error) {
 	// see https://github.com/google/jsonschema-go/issues/23 for details
 	// if bot.prompt.Schema.Input != nil {
 	// 	if err := bot.validateSchema(in, bot.prompt.Schema.Input); err != nil {
@@ -181,7 +181,7 @@ func (bot *ReAct[A, B]) encode(in A) (chatter.Message, error) {
 	return &prompt, nil
 }
 
-func (bot *ReAct[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
+func (bot *BotReAct[A, B]) decode(reply *chatter.Reply) (float64, B, error) {
 	if bot.prompt.Schema.Format == "text" {
 		out := new(B)
 

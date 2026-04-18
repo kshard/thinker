@@ -119,11 +119,9 @@ func TestRuntime(t *testing.T) {
 // =============================================================================
 
 func TestSeq(t *testing.T) {
-	rt := nanobot.NewRuntime(nil, nil)
-
 	t.Run("Success", func(t *testing.T) {
 		botA := &MockBot[Work, string]{
-			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
 				return "from-a", nil
 			},
 		}
@@ -133,13 +131,15 @@ func TestSeq(t *testing.T) {
 			},
 		}
 
-		seq, err := nanobot.NewSeq(rt, botA, botB)
-		it.Then(t).Should(it.Nil(err))
+		seq := nanobot.Seq(
+			nanobot.Arrow(botA),
+			nanobot.Arrow(botB),
+		)
 
 		result, err := seq.Prompt(context.Background(), Work{})
 		it.Then(t).Should(
 			it.Nil(err),
-			it.Equal(result, "from-a-from-b"),
+			it.Equal(result.Result, "from-a-from-b"),
 		)
 	})
 
@@ -156,10 +156,12 @@ func TestSeq(t *testing.T) {
 			},
 		}
 
-		seq, err := nanobot.NewSeq(rt, botA, botB)
-		it.Then(t).Should(it.Nil(err))
+		seq := nanobot.Seq(
+			nanobot.Arrow[Work, string](botA),
+			nanobot.Arrow[Work, string](botB),
+		)
 
-		_, err = seq.Prompt(context.Background(), Work{})
+		_, err := seq.Prompt(context.Background(), Work{})
 		it.Then(t).ShouldNot(it.Nil(err))
 		it.Then(t).Should(it.True(errors.Is(err, errA)))
 	})
@@ -177,10 +179,12 @@ func TestSeq(t *testing.T) {
 			},
 		}
 
-		seq, err := nanobot.NewSeq(rt, botA, botB)
-		it.Then(t).Should(it.Nil(err))
+		seq := nanobot.Seq(
+			nanobot.Arrow[Work, string](botA),
+			nanobot.Arrow[Work, string](botB),
+		)
 
-		_, err = seq.Prompt(context.Background(), Work{})
+		_, err := seq.Prompt(context.Background(), Work{})
 		it.Then(t).ShouldNot(it.Nil(err))
 		it.Then(t).Should(it.True(errors.Is(err, errB)))
 	})
@@ -205,18 +209,18 @@ func TestSeq(t *testing.T) {
 			},
 		}
 
-		seq, err := nanobot.NewSeq(rt, botA, botB)
-		it.Then(t).Should(it.Nil(err))
-
-		seq = seq.WithApply(func(s StateAB, a A) StateAB {
-			applied = string(a)
-			return StateAB{A: a, B: s.B}
+		arrA := nanobot.Arrow(botA, nanobot.Eff[StateAB, A]{
+			Lens: func(s StateAB, a A) StateAB {
+				applied = string(a)
+				return StateAB{A: a, B: s.B}
+			},
 		})
+		seq := nanobot.Seq(arrA, nanobot.Arrow(botB))
 
 		result, err := seq.Prompt(context.Background(), StateAB{})
 		it.Then(t).Should(
 			it.Nil(err),
-			it.Equal(result, "output-a"),
+			it.Equal(result.A, A("output-a")),
 			it.Equal(applied, "output-a"),
 		)
 	})
@@ -234,15 +238,15 @@ func TestSeq(t *testing.T) {
 			},
 		}
 
-		seq, err := nanobot.NewSeq(rt, botA, botB)
-		it.Then(t).Should(it.Nil(err))
-
-		seq = seq.WithEffect(func(ctx context.Context, w Work) (Work, error) {
-			effectCalled = true
-			return w, nil
+		arrA := nanobot.Arrow[Work, string](botA, nanobot.Eff[Work, string]{
+			Eval: func(ctx context.Context, w Work) (Work, error) {
+				effectCalled = true
+				return w, nil
+			},
 		})
+		seq := nanobot.Seq(arrA, nanobot.Arrow[Work, string](botB))
 
-		_, err = seq.Prompt(context.Background(), Work{})
+		_, err := seq.Prompt(context.Background(), Work{})
 		it.Then(t).Should(
 			it.Nil(err),
 			it.True(effectCalled),
@@ -262,16 +266,85 @@ func TestSeq(t *testing.T) {
 			},
 		}
 
-		seq, err := nanobot.NewSeq(rt, botA, botB)
-		it.Then(t).Should(it.Nil(err))
-
-		seq = seq.WithEffect(func(_ context.Context, w Work) (Work, error) {
-			return w, errEffect
+		arrA := nanobot.Arrow(botA, nanobot.Eff[Work, string]{
+			Eval: func(ctx context.Context, w Work) (Work, error) {
+				return w, errEffect
+			},
 		})
+		seq := nanobot.Seq(arrA, nanobot.Arrow(botB))
 
-		_, err = seq.Prompt(context.Background(), Work{})
+		_, err := seq.Prompt(context.Background(), Work{})
 		it.Then(t).ShouldNot(it.Nil(err))
 		it.Then(t).Should(it.True(errors.Is(err, errEffect)))
+	})
+}
+
+// =============================================================================
+// TestWhen
+// =============================================================================
+
+func TestWhen(t *testing.T) {
+	t.Run("SkipWhenFalse", func(t *testing.T) {
+		called := false
+		bot := &MockBot[Work, string]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
+				called = true
+				return "new", nil
+			},
+		}
+		arr := nanobot.Arrow[Work, string](bot).When(func(w Work) bool { return len(w.Result) == 0 })
+
+		result, err := arr(context.Background(), Work{Result: "already-set"})
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(result.Result, "already-set"),
+			it.True(!called),
+		)
+	})
+
+	t.Run("RunWhenTrue", func(t *testing.T) {
+		bot := &MockBot[Work, string]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
+				return "filled", nil
+			},
+		}
+		arr := nanobot.Arrow[Work, string](bot).When(func(w Work) bool { return len(w.Result) == 0 })
+
+		result, err := arr(context.Background(), Work{})
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(result.Result, "filled"),
+		)
+	})
+
+	t.Run("InSeq", func(t *testing.T) {
+		calls := []string{}
+		botA := &MockBot[Work, string]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
+				calls = append(calls, "A")
+				return "from-a", nil
+			},
+		}
+		botB := &MockBot[Work, string]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
+				calls = append(calls, "B")
+				return "from-b", nil
+			},
+		}
+
+		// first step already done (Result non-empty); second step runs
+		seq := nanobot.Seq(
+			nanobot.Arrow(botA).When(func(w Work) bool { return len(w.Result) == 0 }),
+			nanobot.Arrow(botB).When(func(w Work) bool { return true }),
+		)
+
+		result, err := seq(context.Background(), Work{Result: "pre-filled"})
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(result.Result, "from-b"),
+			it.Equal(len(calls), 1),
+			it.Equal(calls[0], "B"),
+		)
 	})
 }
 
@@ -283,9 +356,10 @@ func TestReflect(t *testing.T) {
 	rt := nanobot.NewRuntime(nil, nil)
 
 	t.Run("AcceptOnFirstAttempt", func(t *testing.T) {
-		judge := &MockBot[Work, string]{
+		rawJudge := &MockBot[Work, string]{
+			// echo the input — auto-derived lens puts it back, preserving Result
 			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
-				return "verdict", nil
+				return w.Result, nil
 			},
 		}
 		react := &MockBot[Work, string]{
@@ -294,10 +368,12 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt, judge, react)
+		// no eff: Lens=auto-lens, Eval=always-accept(+1)
+		judge := nanobot.Judge(rawJudge)
+
+		bot, err := nanobot.NewReflect(rt, judge, nanobot.Arrow(react))
 		it.Then(t).Should(it.Nil(err))
 
-		// default accept always accepts (returns +1)
 		result, err := bot.Prompt(context.Background(), Work{Result: "initial"})
 		it.Then(t).Should(
 			it.Nil(err),
@@ -306,7 +382,7 @@ func TestReflect(t *testing.T) {
 	})
 
 	t.Run("ImmediateReject", func(t *testing.T) {
-		judge := &MockBot[Work, string]{
+		rawJudge := &MockBot[Work, string]{
 			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
 				return "bad", nil
 			},
@@ -317,13 +393,17 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt, judge, react)
-		it.Then(t).Should(it.Nil(err))
+		judge := nanobot.Judge(rawJudge,
+			nanobot.Eff[nanobot.Vote[Work], string]{
+				Eval: func(_ context.Context, v nanobot.Vote[Work]) (nanobot.Vote[Work], error) {
+					v.Reject()
+					return v, nil
+				},
+			},
+		)
 
-		// accept function returns -1 to immediately reject
-		bot = bot.WithAccept(func(s Work, verdict string) (Work, int) {
-			return s, -1
-		})
+		bot, err := nanobot.NewReflect(rt, judge, nanobot.Arrow(react))
+		it.Then(t).Should(it.Nil(err))
 
 		_, err = bot.Prompt(context.Background(), Work{Result: "initial"})
 		it.Then(t).ShouldNot(it.Nil(err))
@@ -331,9 +411,14 @@ func TestReflect(t *testing.T) {
 
 	t.Run("RetryThenAccept", func(t *testing.T) {
 		call := 0
-		judge := &MockBot[Work, string]{
-			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
-				return w.Result, nil
+		rawJudge := &MockBot[Work, string]{
+			// returns different verdicts per call; auto-lens writes them into Work.Result
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
+				call++
+				if call < 2 {
+					return "needs-work", nil
+				}
+				return "accepted", nil
 			},
 		}
 		react := &MockBot[Work, string]{
@@ -342,20 +427,19 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt, judge, react)
+		judge := nanobot.Judge(rawJudge, nanobot.Eff[nanobot.Vote[Work], string]{
+			Eval: func(_ context.Context, v nanobot.Vote[Work]) (nanobot.Vote[Work], error) {
+				if v.State.Result == "accepted" {
+					v.Accept()
+				}
+				return v, nil
+			},
+		})
+
+		bot, err := nanobot.NewReflect(rt, judge, nanobot.Arrow[Work, string](react))
 		it.Then(t).Should(it.Nil(err))
 
-		bot = bot.
-			WithAttempts(3).
-			WithAccept(func(s Work, verdict string) (Work, int) {
-				call++
-				if call < 2 {
-					// neutral → continue retrying
-					return s, 0
-				}
-				// accept on 2nd call
-				return Work{Result: "accepted"}, 1
-			})
+		bot = bot.WithAttempts(3)
 
 		result, err := bot.Prompt(context.Background(), Work{Result: "initial"})
 		it.Then(t).Should(
@@ -365,7 +449,7 @@ func TestReflect(t *testing.T) {
 	})
 
 	t.Run("ExhaustsAttempts", func(t *testing.T) {
-		judge := &MockBot[Work, string]{
+		rawJudge := &MockBot[Work, string]{
 			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
 				return w.Result, nil
 			},
@@ -376,15 +460,17 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt, judge, react)
+		// always neutral → exhaust all 2 attempts
+		judge := nanobot.Judge[Work, string](rawJudge, nanobot.Eff[nanobot.Vote[Work], string]{
+			Eval: func(_ context.Context, v nanobot.Vote[Work]) (nanobot.Vote[Work], error) {
+				return v, nil // Accepted stays 0
+			},
+		})
+
+		bot, err := nanobot.NewReflect(rt, judge, nanobot.Arrow[Work, string](react))
 		it.Then(t).Should(it.Nil(err))
 
-		// always neutral → exhaust all 2 attempts
-		bot = bot.
-			WithAttempts(2).
-			WithAccept(func(s Work, verdict string) (Work, int) {
-				return s, 0
-			})
+		bot = bot.WithAttempts(2)
 
 		_, err = bot.Prompt(context.Background(), Work{Result: "initial"})
 		it.Then(t).ShouldNot(it.Nil(err))
@@ -392,9 +478,9 @@ func TestReflect(t *testing.T) {
 
 	t.Run("JudgeError", func(t *testing.T) {
 		errJudge := errors.New("judge error")
-		judge := &MockBot[Work, string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
-				return "", errJudge
+		judge := &MockBot[Work, nanobot.Vote[Work]]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (nanobot.Vote[Work], error) {
+				return nanobot.Vote[Work]{}, errJudge
 			},
 		}
 		react := &MockBot[Work, string]{
@@ -403,11 +489,8 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt, judge, react)
+		bot, err := nanobot.NewReflect(rt, judge, nanobot.Arrow[Work, string](react))
 		it.Then(t).Should(it.Nil(err))
-		bot = bot.WithAccept(func(s Work, verdict string) (Work, int) {
-			return s, 0
-		})
 
 		_, err = bot.Prompt(context.Background(), Work{})
 		it.Then(t).ShouldNot(it.Nil(err))
@@ -416,7 +499,7 @@ func TestReflect(t *testing.T) {
 
 	t.Run("ReactError", func(t *testing.T) {
 		errReact := errors.New("react error")
-		judge := &MockBot[Work, string]{
+		rawJudge := &MockBot[Work, string]{
 			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
 				return w.Result, nil
 			},
@@ -427,13 +510,17 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt, judge, react)
+		// neutral → triggers correct arrow
+		judge := nanobot.Judge[Work, string](rawJudge, nanobot.Eff[nanobot.Vote[Work], string]{
+			Eval: func(_ context.Context, v nanobot.Vote[Work]) (nanobot.Vote[Work], error) {
+				return v, nil // Accepted stays 0
+			},
+		})
+
+		bot, err := nanobot.NewReflect(rt, judge, nanobot.Arrow[Work, string](react))
 		it.Then(t).Should(it.Nil(err))
 
-		// neutral → triggers react bot
-		bot = bot.WithAttempts(2).WithAccept(func(s Work, verdict string) (Work, int) {
-			return s, 0
-		})
+		bot = bot.WithAttempts(2)
 
 		_, err = bot.Prompt(context.Background(), Work{})
 		it.Then(t).ShouldNot(it.Nil(err))
@@ -442,7 +529,7 @@ func TestReflect(t *testing.T) {
 
 	t.Run("EffectError", func(t *testing.T) {
 		errEffect := errors.New("effect error")
-		judge := &MockBot[Work, string]{
+		rawJudge := &MockBot[Work, string]{
 			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
 				return w.Result, nil
 			},
@@ -453,15 +540,22 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt, judge, react)
+		// neutral → correct arrow runs; effect inside correct Arrow fails
+		judge := nanobot.Judge[Work, string](rawJudge, nanobot.Eff[nanobot.Vote[Work], string]{
+			Eval: func(_ context.Context, v nanobot.Vote[Work]) (nanobot.Vote[Work], error) {
+				return v, nil // Accepted stays 0
+			},
+		})
+		correct := nanobot.Arrow[Work, string](react, nanobot.Eff[Work, string]{
+			Eval: func(_ context.Context, w Work) (Work, error) {
+				return w, errEffect
+			},
+		})
+
+		bot, err := nanobot.NewReflect(rt, judge, correct)
 		it.Then(t).Should(it.Nil(err))
 
-		bot = bot.
-			WithAttempts(2).
-			WithAccept(func(s Work, _ string) (Work, int) { return s, 0 }).
-			WithEffect(func(_ context.Context, w Work) (Work, error) {
-				return w, errEffect
-			})
+		bot = bot.WithAttempts(2)
 
 		_, err = bot.Prompt(context.Background(), Work{})
 		it.Then(t).ShouldNot(it.Nil(err))
@@ -472,7 +566,7 @@ func TestReflect(t *testing.T) {
 		chalk := &MockChalk{}
 		rt2 := nanobot.NewRuntime(nil, nil).WithStdout(chalk)
 
-		judge := &MockBot[Work, string]{
+		rawJudge := &MockBot[Work, string]{
 			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
 				return w.Result, nil
 			},
@@ -483,9 +577,11 @@ func TestReflect(t *testing.T) {
 			},
 		}
 
-		bot, err := nanobot.NewReflect(rt2, judge, react)
+		// no eff: always-accept on first attempt
+		judge := nanobot.Judge[Work, string](rawJudge)
+
+		bot, err := nanobot.NewReflect(rt2, judge, nanobot.Arrow[Work, string](react))
 		it.Then(t).Should(it.Nil(err))
-		// default accept → accept on first attempt
 		_, err = bot.Prompt(context.Background(), Work{Result: "state"})
 		it.Then(t).Should(it.Nil(err))
 		it.Then(t).Should(it.True(chalk.dones >= 2))
@@ -496,45 +592,51 @@ func TestReflect(t *testing.T) {
 // TestThinkReAct
 // =============================================================================
 
+// TaskState is the inner per-task state for ThinkReAct tests.
+type TaskState struct{ Value string }
+
 func TestThinkReAct(t *testing.T) {
 	rt := nanobot.NewRuntime(nil, nil)
 
 	t.Run("Success", func(t *testing.T) {
-		think := &MockBot[Work, []string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]string, error) {
-				return []string{"task-1", "task-2"}, nil
+		think := &MockBot[Work, []TaskState]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]TaskState, error) {
+				return []TaskState{{Value: "task-1"}, {Value: "task-2"}}, nil
 			},
 		}
-		react := &MockBot[Work, string]{
-			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
-				return "done:" + w.Result, nil
-			},
+		react := nanobot.Arr[TaskState](func(_ context.Context, t TaskState, _ ...chatter.Opt) (TaskState, error) {
+			return TaskState{Value: "done:" + t.Value}, nil
+		})
+		gather := func(s Work, ts []TaskState) Work {
+			for _, t := range ts {
+				s.Result += t.Value + ";"
+			}
+			return s
 		}
 
-		bot, err := nanobot.NewThinkReAct(rt, think, react)
+		bot, err := nanobot.NewThinkReAct(rt, think, react, gather)
 		it.Then(t).Should(it.Nil(err))
 
-		results, err := bot.Prompt(context.Background(), Work{})
+		result, err := bot.Prompt(context.Background(), Work{})
 		it.Then(t).Should(
 			it.Nil(err),
-			it.Equal(len(results), 2),
+			it.Equal(result.Result, "done:task-1;done:task-2;"),
 		)
 	})
 
 	t.Run("ThinkFails", func(t *testing.T) {
 		errThink := errors.New("think error")
-		think := &MockBot[Work, []string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]string, error) {
+		think := &MockBot[Work, []TaskState]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]TaskState, error) {
 				return nil, errThink
 			},
 		}
-		react := &MockBot[Work, string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
-				return "done", nil
-			},
-		}
+		react := nanobot.Arr[TaskState](func(_ context.Context, t TaskState, _ ...chatter.Opt) (TaskState, error) {
+			return t, nil
+		})
+		gather := func(s Work, _ []TaskState) Work { return s }
 
-		bot, err := nanobot.NewThinkReAct(rt, think, react)
+		bot, err := nanobot.NewThinkReAct(rt, think, react, gather)
 		it.Then(t).Should(it.Nil(err))
 
 		_, err = bot.Prompt(context.Background(), Work{})
@@ -544,18 +646,17 @@ func TestThinkReAct(t *testing.T) {
 
 	t.Run("ReactFails", func(t *testing.T) {
 		errReact := errors.New("react error")
-		think := &MockBot[Work, []string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]string, error) {
-				return []string{"task-1", "task-2"}, nil
+		think := &MockBot[Work, []TaskState]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]TaskState, error) {
+				return []TaskState{{Value: "task-1"}}, nil
 			},
 		}
-		react := &MockBot[Work, string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
-				return "", errReact
-			},
-		}
+		react := nanobot.Arr[TaskState](func(_ context.Context, _ TaskState, _ ...chatter.Opt) (TaskState, error) {
+			return TaskState{}, errReact
+		})
+		gather := func(s Work, _ []TaskState) Work { return s }
 
-		bot, err := nanobot.NewThinkReAct(rt, think, react)
+		bot, err := nanobot.NewThinkReAct(rt, think, react, gather)
 		it.Then(t).Should(it.Nil(err))
 
 		_, err = bot.Prompt(context.Background(), Work{})
@@ -563,88 +664,101 @@ func TestThinkReAct(t *testing.T) {
 		it.Then(t).Should(it.True(errors.Is(err, errReact)))
 	})
 
-	t.Run("WithApply", func(t *testing.T) {
-		applied := []string{}
-		think := &MockBot[Work, []string]{
+	t.Run("WithThink", func(t *testing.T) {
+		// Test the Think combinator that scatters Bot[S, []A] into Bot[S, []T]
+		planBot := &MockBot[Work, []string]{
 			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]string, error) {
 				return []string{"t1", "t2"}, nil
 			},
 		}
-		react := &MockBot[Work, string]{
-			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
-				return w.Result, nil
-			},
+		think := nanobot.Think(planBot, func(s Work, task string) TaskState {
+			return TaskState{Value: task}
+		})
+		react := nanobot.Arr[TaskState](func(_ context.Context, t TaskState, _ ...chatter.Opt) (TaskState, error) {
+			return TaskState{Value: "done:" + t.Value}, nil
+		})
+		gather := func(s Work, ts []TaskState) Work {
+			for _, t := range ts {
+				s.Result += t.Value + ";"
+			}
+			return s
 		}
 
-		bot, err := nanobot.NewThinkReAct(rt, think, react)
+		bot, err := nanobot.NewThinkReAct(rt, think, react, gather)
 		it.Then(t).Should(it.Nil(err))
 
-		bot = bot.WithApply(func(s Work, task string) Work {
-			applied = append(applied, task)
-			return Work{Result: task}
-		})
-
-		results, err := bot.Prompt(context.Background(), Work{})
+		result, err := bot.Prompt(context.Background(), Work{})
 		it.Then(t).Should(
 			it.Nil(err),
-			it.Equal(len(results), 2),
-			it.Equal(results[0], "t1"),
-			it.Equal(results[1], "t2"),
-			it.Equal(len(applied), 2),
+			it.Equal(result.Result, "done:t1;done:t2;"),
 		)
 	})
 
-	t.Run("WithEffect", func(t *testing.T) {
-		effectCount := 0
-		think := &MockBot[Work, []string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]string, error) {
-				return []string{"t1", "t2", "t3"}, nil
+	t.Run("ReactIsComposedPipeline", func(t *testing.T) {
+		// react is Arr[T], so it can be a Seq of multiple steps
+		think := &MockBot[Work, []TaskState]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]TaskState, error) {
+				return []TaskState{{Value: "x"}}, nil
 			},
 		}
-		react := &MockBot[Work, string]{
-			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
-				return w.Result, nil
-			},
+		step1 := nanobot.Arr[TaskState](func(_ context.Context, t TaskState, _ ...chatter.Opt) (TaskState, error) {
+			return TaskState{Value: t.Value + "+step1"}, nil
+		})
+		step2 := nanobot.Arr[TaskState](func(_ context.Context, t TaskState, _ ...chatter.Opt) (TaskState, error) {
+			return TaskState{Value: t.Value + "+step2"}, nil
+		})
+		react := nanobot.Seq(step1, step2)
+
+		gather := func(s Work, ts []TaskState) Work {
+			s.Result = ts[0].Value
+			return s
 		}
 
-		bot, err := nanobot.NewThinkReAct(rt, think, react)
+		bot, err := nanobot.NewThinkReAct(rt, think, react, gather)
 		it.Then(t).Should(it.Nil(err))
 
-		bot = bot.WithEffect(func(_ context.Context, w Work) (Work, error) {
-			effectCount++
-			return w, nil
-		})
-
-		_, err = bot.Prompt(context.Background(), Work{})
+		result, err := bot.Prompt(context.Background(), Work{})
 		it.Then(t).Should(
 			it.Nil(err),
-			it.Equal(effectCount, 3),
+			it.Equal(result.Result, "x+step1+step2"),
 		)
 	})
 
-	t.Run("EffectFails", func(t *testing.T) {
-		errEffect := errors.New("effect error")
-		think := &MockBot[Work, []string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]string, error) {
-				return []string{"t1"}, nil
+	t.Run("ReturnsArrS", func(t *testing.T) {
+		// ThinkReAct returns Bot[S, S] ≅ Arr[S], so it nests in Seq
+		think := &MockBot[Work, []TaskState]{
+			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) ([]TaskState, error) {
+				return []TaskState{{Value: "a"}}, nil
 			},
 		}
-		react := &MockBot[Work, string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
-				return "done", nil
-			},
+		react := nanobot.Arr[TaskState](func(_ context.Context, t TaskState, _ ...chatter.Opt) (TaskState, error) {
+			return t, nil
+		})
+		gather := func(s Work, ts []TaskState) Work {
+			s.Result = ts[0].Value
+			return s
 		}
 
-		bot, err := nanobot.NewThinkReAct(rt, think, react)
+		thinkreact, err := nanobot.NewThinkReAct(rt, think, react, gather)
 		it.Then(t).Should(it.Nil(err))
 
-		bot = bot.WithEffect(func(_ context.Context, w Work) (Work, error) {
-			return w, errEffect
+		// BotThinkReAct satisfies Bot[S, S], compose directly via Seq
+		suffix := nanobot.Lift(func(_ context.Context, s Work) (Work, error) {
+			s.Result += "!"
+			return s, nil
 		})
+		pipeline := nanobot.Seq(
+			nanobot.Lift(func(ctx context.Context, s Work) (Work, error) {
+				return thinkreact.Prompt(ctx, s)
+			}),
+			suffix,
+		)
 
-		_, err = bot.Prompt(context.Background(), Work{})
-		it.Then(t).ShouldNot(it.Nil(err))
-		it.Then(t).Should(it.True(errors.Is(err, errEffect)))
+		result, err := pipeline(context.Background(), Work{})
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(result.Result, "a!"),
+		)
 	})
 }
 
