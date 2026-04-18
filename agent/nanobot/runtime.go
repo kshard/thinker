@@ -256,6 +256,35 @@ func Lift[S any](eval Eval[S]) Arr[S] {
 	}
 }
 
+// Pure lifts a deterministic function func(context.Context, S) (A, error) into
+// Bot[S, A] with no LLM call. This is the unit/return of the Bot abstraction:
+// it bridges pure blackboard reads into any position that expects a Bot[S, A],
+// most notably the think argument of ThinkReAct.
+//
+//	Pure(f) : Bot[S, A]  where  Prompt(s) = f(s)
+//
+// Typical use — read an existing []A field from S and pass it to ThinkReAct:
+//
+//	ThinkReAct(rt,
+//	    Think(
+//	        Pure(func(_ context.Context, s S) ([]A, error) { return s.Items, nil }),
+//	        func(s S, a A) T { return T{Item: a, Ctx: s.SharedCtx} },
+//	    ),
+//	    react,
+//	    gather,
+//	)
+func Pure[S, A any](f func(context.Context, S) (A, error)) Bot[S, A] {
+	return &botPure[S, A]{f: f}
+}
+
+type botPure[S, A any] struct {
+	f func(context.Context, S) (A, error)
+}
+
+func (b *botPure[S, A]) Prompt(ctx context.Context, s S, opt ...chatter.Opt) (A, error) {
+	return b.f(ctx, s)
+}
+
 // =============================================================================
 // Internal lens helpers
 // =============================================================================

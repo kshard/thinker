@@ -12,6 +12,7 @@ All computation happens over a **blackboard** — a typed state record `S` that 
 Bot[S, A]    — an agent that reads blackboard S and produces result A
 Arr[S]       — an agent step S ⇝ S (equivalent to Bot[S, S])
 ReAct[A, B]  — a primitive LLM agent (the only non-deterministic component)
+Pure(f)      — a deterministic agent: lifts f : S → M A into Bot[S, A] (no LLM call)
 ```
 
 ### Bridging (Bot → Arr)
@@ -58,11 +59,11 @@ S = {
 
 ### 2. Agents
 
-List each Bot with its role, input/output types, and a one-line behavioural description. Each agent is a ReAct leaf — the only component that calls an LLM.
+List each Bot with its role, input/output types, and a one-line behavioural description. Each agent is either a ReAct leaf (LLM call) or a Pure leaf (deterministic computation).
 
 ```
-b1 : Bot[S, A]  — "<what it does>"
-b2 : Bot[S, B]  — "<what it does>"
+b1 : Bot[S, A]  — "<what it does>"            (ReAct)
+b2 : Bot[S, B]  — "<what it does>"            (Pure)
 ```
 
 ### 3. Pipeline
@@ -84,7 +85,7 @@ List any custom Lens, Eval, scatter (σ), or gather (γ) functions with their lo
 
 ## Rules
 
-1. **Every LLM call is a Bot.** No implicit reasoning steps. If it needs an LLM, it's a named Bot.
+1. **Every LLM call is a Bot (ReAct). Every deterministic projection is a Bot (Pure).** No implicit reasoning steps. If it needs an LLM, it's a ReAct. If it reads or transforms the blackboard without an LLM, it's a Pure.
 2. **Every Bot is lifted into Arr via Arrow** before entering Seq or Reflect. The output type A disappears — absorbed into S by the Lens.
 3. **Seq for sequential dependencies.** Step i+1 reads what step i wrote. State threads forward.
 4. **Reflect for quality gates.** Use when output must meet a criterion. The judge decides accept/revise/reject; the corrector fixes on revise.

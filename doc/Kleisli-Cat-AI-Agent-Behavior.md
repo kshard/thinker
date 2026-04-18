@@ -1,4 +1,4 @@
-# The Kleisli Category as a Formal Abstraction of AI Agent Behaviour
+# A Kleisli Category Model of AI Agent Behavior
 
 **Dmitry Kolesnikov** · `github.com/kshard/thinker` · April 2026
 
@@ -11,11 +11,11 @@ receives a prompt, calls tools, and produces a reply. This paper gives a
 categorical account of that intuition. We show that every agent
 behaviour — sequential composition, reflective self-correction, and plan-then-execute 
 — can be expressed as a morphism in the **Kleisli category** of
-the combined error-and-state monad. The resulting algebra has a single primitive morphism ($\text{ReAct}$),
-three bridging concepts ($\text{Arr}$, $\text{Arrow}$, $\text{Eff}$),
-and three structural combinators ($\text{Seq}$, $\text{Reflect}$,
-$\text{ThinkReAct}$) that correspond directly to well-known patterns in
-multi-agent system design.
+the combined error-and-state monad. The resulting algebra has two primitive morphisms ($\text{ReAct}$ and
+$\text{Pure}$), three bridging concepts ($\text{Arr}$, $\text{Arrow}$,
+$\text{Eff}$), and three structural combinators ($\text{Seq}$,
+$\text{Reflect}$, $\text{ThinkReAct}$) that correspond directly to
+well-known patterns in multi-agent system design.
 
 
 ## 1. Introduction
@@ -160,7 +160,33 @@ is a *structural* composition that takes one or more $\text{Bot}$ values and
 produces a new $\text{Bot}$. The $\text{ReAct}$ instances are the leaves of
 every composition tree.
 
-### 3.3 From Bot to Arrow: The Bridging Problem
+### 3.3 Pure: The Deterministic Realisation of Bot
+
+Not every $\text{Bot}$ requires an LLM. $\text{Pure}$ lifts an ordinary
+Kleisli morphism $f : S \to M\,A$ into $\text{Bot}[S, A]$:
+
+$$\text{Pure} : (S \to M\,A) \to \text{Bot}[S, A]$$
+
+$$\text{Pure}(f) \;\triangleq\; f$$
+
+Where $\text{ReAct}$ is the *non-deterministic* primitive (it calls an
+external LLM), $\text{Pure}$ is its *deterministic* counterpart: it performs
+a computation that depends only on the blackboard and the execution context.
+Typical uses include computing a derived value from $S$.
+
+**Lemma 3.3** (Pure is a Bot). *$\text{Pure}(f)$ satisfies $\text{Bot}[S, A]$
+for any $f : S \to M\,A$.*
+
+*Proof.* $\text{Bot}[S, A] \triangleq S \to M\,A$. Since $f : S \to M\,A$,
+the inclusion is the identity. $\square$
+
+Together $\text{ReAct}$ and $\text{Pure}$ exhaust the two modes of
+$\text{Bot}$ construction: LLM-backed and deterministic. Every structural
+combinator ($\text{Arrow}$, $\text{Seq}$, $\text{Reflect}$, $\text{ThinkReAct}$,
+$\text{Think}$) composes over $\text{Bot}$ values regardless of which
+primitive produced them.
+
+### 3.4 From Bot to Arrow: The Bridging Problem
 
 A single $\text{ReAct}$ agent produces a result of type $A$, but the
 blackboard has type $S$. To compose agents into a complex task solver we need
@@ -193,14 +219,14 @@ $\text{Eval}$ is absent the identity $\eta_S$ is used.
 
 $$\text{Eff}[S, A] \;\triangleq\; \text{Lens}[S, A] \times \text{Eval}[S]$$
 
-### 3.4 The Kleisli Arrow: $\text{Arr}$ and $\text{Arrow}$
+### 3.5 The Kleisli Arrow: $\text{Arr}$ and $\text{Arrow}$
 
 With the bridging types in hand, we define the *Kleisli arrow* — the
 endomorphism that every agent step must inhabit — this abstraction enforces determisism for probabilistic $\text{Bot}$ behaviour:
 
 $$\text{Arr}[S] \;\triangleq\; S \to M\,S$$
 
-**Lemma 3.3** (Arr–Bot Isomorphism). *$\text{Arr}[S] \cong \text{Bot}[S, S]$.*
+**Lemma 3.4** (Arr–Bot Isomorphism). *$\text{Arr}[S] \cong \text{Bot}[S, S]$.*
 
 *Proof.* Both are defined as $S \to M\,S$. The isomorphism is the identity
 function: given $f : \text{Arr}[S]$, define
@@ -227,7 +253,7 @@ Together they yield a single Kleisli endomorphism. $\text{Arrow}$ is thus a
 mapping from the hom-set $\text{Bot}[S, A]$ into
 $\text{End}_{\mathbf{Kl}(M)}(S)$, the monoid of endomorphisms on $S$.
 
-**Lemma 3.4** (Arrow Well-Definedness). *For any $b : \text{Bot}[S, A]$ and
+**Lemma 3.5** (Arrow Well-Definedness). *For any $b : \text{Bot}[S, A]$ and
 $\varphi : \text{Eff}[S, A]$, $\text{Arrow}(b, \varphi)$ is a valid Kleisli
 endomorphism $S \twoheadrightarrow S$.*
 
@@ -240,7 +266,7 @@ $$\text{Arrow}(b, \varphi)(s) \;=\; b(s) \mathbin{\gg\!=} \lambda a.\; \varphi.\
 
 which has type $M\,S$. Therefore $\text{Arrow}(b, \varphi) : S \to M\,S = \text{Arr}[S]$. $\square$
 
-### 3.5 Lifting Computations: $\text{Lift}$
+### 3.6 Lifting Computations: $\text{Lift}$
 
 Not every task solving step involves an LLM call. Pure computations, validation,
 or transformation steps that operate directly on the blackboard are plain
@@ -251,7 +277,7 @@ $$\text{Lift} : \text{Eval}[S] \to \text{Arr}[S]$$
 
 $$\text{Lift}(e) \;\triangleq\; e$$
 
-**Lemma 3.5** (Lift Embedding). *$\text{Lift}$ is a faithful embedding of
+**Lemma 3.6** (Lift Embedding). *$\text{Lift}$ is a faithful embedding of
 $(\text{Eval}[S], \mathbin{>\!\!=\!\!>})$ into $(\text{Arr}[S], \mathbin{>\!\!=\!\!>})$.*
 
 *Proof.* $\text{Lift}$ is the identity on the underlying function type.
@@ -264,7 +290,7 @@ $\text{Lift}$ is the formal mechanism by which deterministic code
 (guardrails, enrichment, persistence) enters the Kleisli algebra on equal
 footing with LLM-backed agents.
 
-### 3.6 Output Functor: $\text{Map}$
+### 3.7 Output Functor: $\text{Map}$
 
 $$\text{Map} : \text{Bot}[S, A] \times (S \times A \to B) \to \text{Bot}[S, B]$$
 
@@ -275,14 +301,14 @@ and the bot's output, enabling projections. The mapping $\text{Bot}[S, -]$
 defines a functor $\mathbf{Type} \to \mathbf{Type}$ with $\text{Map}$ as
 its action on morphisms, parameterised over the reader $S$.
 
-**Lemma 3.6** (Map Identity). *Let $\pi_2 : S \times A \to A$ be the second
+**Lemma 3.7** (Map Identity). *Let $\pi_2 : S \times A \to A$ be the second
 projection. Then $\text{Map}(b, \pi_2) = b$.*
 
 *Proof.* For any $s : S$:
 $\text{Map}(b, \pi_2)(s) = b(s) \mathbin{\gg\!=} \lambda a.\; \eta(\pi_2(s, a)) = b(s) \mathbin{\gg\!=} \lambda a.\; \eta(a) = b(s) \mathbin{\gg\!=} \eta = b(s)$
 by the monad right-identity law. $\square$
 
-**Lemma 3.7** (Map Composition). *For $g : S \times A \to B$ and
+**Lemma 3.8** (Map Composition). *For $g : S \times A \to B$ and
 $f : S \times B \to C$, define the $S$-indexed composition
 $(f \bullet g)(s, a) \triangleq f(s,\, g(s, a))$. Then:*
 
@@ -373,7 +399,7 @@ composition:*
 
 $$\text{Seq}(\text{Lift}(e_1),\;\text{Lift}(e_2)) \;=\; \text{Lift}(e_1 \mathbin{>\!\!=\!\!>} e_2)$$
 
-*Proof.* By Lemma 3.5, $\text{Lift}$ is the identity on the underlying
+*Proof.* By Lemma 3.6, $\text{Lift}$ is the identity on the underlying
 function, so $\text{Seq}(\text{Lift}(e_1), \text{Lift}(e_2)) = e_1 \mathbin{>\!\!=\!\!>} e_2 = \text{Lift}(e_1 \mathbin{>\!\!=\!\!>} e_2)$. $\square$
 
 
@@ -428,7 +454,7 @@ $\text{Arrow}(b_c, \varphi_c)$. The reflection loop is oblivious to the
 corrector's internal output type.
 
 Because $\text{Reflect}$ returns $S$ in $M$, it satisfies $\text{Bot}[S, S]$
-and is therefore isomorphic to $\text{Arr}[S]$ by Lemma 3.3. This allows
+and is therefore isomorphic to $\text{Arr}[S]$ by Lemma 3.4. This allows
 nesting a reflection loop inside a $\text{Seq}$ or another
 $\text{Reflect}$.
 
@@ -541,6 +567,7 @@ has type $S \to M\,S = \text{Arr}[S]$. $\square$
 
 $$\begin{array}{ll}
 \text{ReAct}[A, B] & \text{— primitive LLM agent (reason-act-observe loop)} \\
+\text{Pure}(f) & \text{— deterministic agent (no LLM call)} \\
 \quad\big\vert & \\
 \text{Bot}[S, A] & \text{— Kleisli morphism } S \to M\,A \\
 \quad\big\downarrow\;\text{Arrow}(\varphi) & \text{— absorbs } A \text{ via Eff} \\
@@ -623,8 +650,8 @@ desirable condition for any combinator library.
 **Theorem 6.4.** *$\text{Map}$ satisfies the functor laws under $S$-indexed
 composition $(\bullet)$:*
 
-1. $\text{Map}(b, \pi_2) = b$ *(identity — Lemma 3.6)*
-2. $\text{Map}(\text{Map}(b, g), f) = \text{Map}(b, f \bullet g)$ *(composition — Lemma 3.7)*
+1. $\text{Map}(b, \pi_2) = b$ *(identity — Lemma 3.7)*
+2. $\text{Map}(\text{Map}(b, g), f) = \text{Map}(b, f \bullet g)$ *(composition — Lemma 3.8)*
 
 These guarantee that output transformations compose predictably and that
 $\text{Map}(b, f)$ does not re-execute the bot.
@@ -704,7 +731,7 @@ $\varphi : \text{Eff}[\text{Vote}[S], A]$ encodes the decision policy
 separately, promoting reuse: the same underlying evaluator bot can serve
 different reflection policies by varying only $\varphi$.
 
-### 8.5 $\text{ReAct}$ as the Sole Source of Non-Determinism
+### 8.5 $\text{ReAct}$ and $\text{Pure}$: Two Modes of Bot Construction
 
 Every combinator in the hierarchy except $\text{ReAct}$ is a *deterministic*
 structural transformation: $\text{Arrow}$ applies a pure fold and a
@@ -712,10 +739,13 @@ side-effect; $\text{Seq}$ threads state; $\text{Reflect}$ iterates;
 $\text{Think}$ scatters; and $\text{ThinkReAct}$ traverses and gathers.
 The only source of non-determinism
 (and the only component that contacts an external LLM) is $\text{ReAct}$.
+$\text{Pure}$ is the deterministic counterpart: it lifts an ordinary function
+into $\text{Bot}[S, A]$ without invoking a model. Together, $\text{ReAct}$
+and $\text{Pure}$ exhaust the two construction modes for $\text{Bot}$.
 This separation has a practical consequence: the structural combinators can
 be tested and verified independently of any language model, and the
-composition laws (Theorems 6.1–6.4) hold regardless of which model is wired
-into the $\text{ReAct}$ leaves.
+composition laws (Theorems 6.1–6.4) hold regardless of which primitive
+produced the $\text{Bot}$ leaves.
 
 
 ## 9. Conclusion
@@ -727,10 +757,12 @@ $\text{Lens}[S, A]$ (lens put), and $\text{Eff}[S, A]$ (their
 product) — together with the $\text{Arrow}$ lift and the $\text{Arr}[S]$
 type, form a minimal and complete algebra for agent step construction.
 
-The canonical computational realisation of $\text{Bot}$ is the $\text{ReAct}$
-pattern — a cyclic reason-act-observe loop that is the sole source of
-non-determinism in the algebra. Every other combinator is a deterministic
-structural transformation.
+The two primitive realisations of $\text{Bot}$ are $\text{ReAct}$
+(non-deterministic, LLM-backed) and $\text{Pure}$ (deterministic, no model
+call). $\text{ReAct}$ is the sole source of non-determinism;
+$\text{Pure}$ embeds ordinary computations — field projections, derived values,
+sub-list extraction — into the same $\text{Bot}[S, A]$ interface. Every
+other combinator is a deterministic structural transformation.
 
 The three structural combinators — $\text{Seq}$ (monoid composition),
 $\text{Reflect}$ (bounded iteration with $\text{Vote}$/$\text{Judge}$), and
