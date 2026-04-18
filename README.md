@@ -176,7 +176,7 @@ See examples:
 
 Bots are autonomous loops orchestrated by language models. The inputs and outputs are controlled by deterministic guradrails written in Go. The Markdown controls the language model behaviour, and which MCP servers to connect. The `agent/nanobot` toolkit provides execution environment, bindings and composable bot patterns that cover the most common use-cases. 
 
-The design behind a high-level api is formally defined by [The Kleisli Category as a Formal Abstraction of AI Agent Behaviour](./doc/nanobot-kleisli-agent.pdf)
+The design behind a high-level api is formally defined by [A Kleisli Category Model of AI Agent Behavior](./doc/Kleisli-Cat-AI-Agent-Behavior.pdf)
 
 Markdown document with an optional YAML front-matter block serves as the specification for an agent. 
 ```markdown
