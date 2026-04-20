@@ -73,6 +73,18 @@ func NewRuntime(fs fs.FS, llms LLMs) *Runtime {
 	}
 }
 
+// WithFileSystem returns a copy of the runtime that uses the given file system
+// for prompt loading. Each agent will inherit it unless the prompt file declares
+// its own file system.
+func (rt *Runtime) WithFileSystem(fs fs.FS) *Runtime {
+	return &Runtime{
+		FileSystem: fs,
+		LLMs:       rt.LLMs,
+		Registry:   rt.Registry,
+		Chalk:      rt.Chalk,
+	}
+}
+
 // WithRegistry returns a copy of the runtime that uses the given command
 // registry for tool-call dispatch. Each ReAct agent will inherit it unless
 // the prompt file declares its own servers.
