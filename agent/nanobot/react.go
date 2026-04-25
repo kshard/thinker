@@ -41,7 +41,7 @@ type BotReAct[A, B any] struct {
 	registry *command.SeqRegistry
 	prompt   *prompt.Prompt
 	t        *template.Template
-	chalk    Chalk
+	taskf    func(A) string
 }
 
 // ReAct is like NewReAct but panics on error.
@@ -99,10 +99,7 @@ func NewReAct[A, B any](rt *Runtime, file string) (*BotReAct[A, B], error) {
 		runner = aio.NewJsonLogger(os.Stderr, runner)
 	}
 
-	bot := &BotReAct[A, B]{prompt: prompt, t: t, chalk: rt.Chalk}
-	if len(bot.prompt.Name) == 0 {
-		bot.chalk = devnull{}
-	}
+	bot := &BotReAct[A, B]{prompt: prompt, t: t}
 
 	bot.registry = command.NewSeqRegistry()
 	bot.registry.Bind(registry)
@@ -131,6 +128,15 @@ func (bot *BotReAct[A, B]) WithRegistry(r *command.Registry) *BotReAct[A, B] {
 	return bot
 }
 
+func (bot *BotReAct[A, B]) WithTask(name string) *BotReAct[A, B] {
+	return bot.WithTaskf(func(A) string { return name })
+}
+
+func (bot *BotReAct[A, B]) WithTaskf(fn func(A) string) *BotReAct[A, B] {
+	bot.taskf = fn
+	return bot
+}
+
 // Prompt encodes the input using the prompt template, runs the Manifold
 // ReAct loop until the model returns a final answer, and decodes the result
 // into B. Progress is reported via the Chalk sink when the prompt file
@@ -140,18 +146,18 @@ func (bot *BotReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.O
 		bot.memory.Reset()
 	}
 
-	bot.chalk.Task(ctx, bot.prompt.Name)
-	val, err := bot.manifold.Prompt(ctx, input, opt...)
-	if err != nil {
-		if len(bot.prompt.Name) > 0 {
-			bot.chalk.Fail(err)
-		}
-		return val, err
+	chalk, ok := ctx.Value(chalkboard).(Chalk)
+	if !ok || chalk == nil || bot.taskf == nil {
+		return bot.manifold.Prompt(ctx, input, opt...)
 	}
 
-	if len(bot.prompt.Name) > 0 {
-		bot.chalk.Done()
+	chalk.Task(ctx, bot.taskf(input))
+	val, err := bot.manifold.Prompt(ctx, input, opt...)
+	if err != nil {
+		chalk.Fail(err)
+		return val, err
 	}
+	chalk.Done()
 
 	return val, nil
 }

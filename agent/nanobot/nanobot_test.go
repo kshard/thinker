@@ -103,15 +103,6 @@ func TestRuntime(t *testing.T) {
 		it.Then(t).ShouldNot(it.Nil(rt2))
 		it.Then(t).ShouldNot(it.Equal(rt, rt2))
 	})
-
-	t.Run("WithStdout", func(t *testing.T) {
-		rt := nanobot.NewRuntime(nil, nil)
-		chalk := &MockChalk{}
-		rt2 := rt.WithStdout(chalk)
-
-		it.Then(t).ShouldNot(it.Nil(rt2))
-		it.Then(t).ShouldNot(it.Equal(rt, rt2))
-	})
 }
 
 // =============================================================================
@@ -560,31 +551,6 @@ func TestReflect(t *testing.T) {
 		_, err = bot.Prompt(context.Background(), Work{})
 		it.Then(t).ShouldNot(it.Nil(err))
 		it.Then(t).Should(it.True(errors.Is(err, errEffect)))
-	})
-
-	t.Run("WithChalk", func(t *testing.T) {
-		chalk := &MockChalk{}
-		rt2 := nanobot.NewRuntime(nil, nil).WithStdout(chalk)
-
-		rawJudge := &MockBot[Work, string]{
-			fn: func(_ context.Context, w Work, _ ...chatter.Opt) (string, error) {
-				return w.Result, nil
-			},
-		}
-		react := &MockBot[Work, string]{
-			fn: func(_ context.Context, _ Work, _ ...chatter.Opt) (string, error) {
-				return "fix", nil
-			},
-		}
-
-		// no eff: always-accept on first attempt
-		judge := nanobot.Judge[Work, string](rawJudge)
-
-		bot, err := nanobot.NewReflect(rt2, judge, nanobot.Arrow[Work, string](react))
-		it.Then(t).Should(it.Nil(err))
-		_, err = bot.Prompt(context.Background(), Work{Result: "state"})
-		it.Then(t).Should(it.Nil(err))
-		it.Then(t).Should(it.True(chalk.dones >= 2))
 	})
 }
 

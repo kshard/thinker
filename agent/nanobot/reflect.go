@@ -114,7 +114,6 @@ type BotReflect[S any] struct {
 	judge    Bot[S, Vote[S]]
 	correct  Arr[S]
 	attempts int
-	chalk    Chalk
 }
 
 // Reflect creates a BotReflect. Panics on error.
@@ -133,7 +132,6 @@ func NewReflect[S any](rt *Runtime, judge Bot[S, Vote[S]], correct Arr[S]) (*Bot
 		judge:    judge,
 		correct:  correct,
 		attempts: 1,
-		chalk:    rt.Chalk,
 	}, nil
 }
 
@@ -149,43 +147,29 @@ func (bot *BotReflect[S]) WithAttempts(attempts int) *BotReflect[S] {
 // correct arrow and the loop retries. An error is returned on a hard reject
 // or when the retry budget is exhausted.
 func (bot *BotReflect[S]) Prompt(ctx context.Context, input S, opt ...chatter.Opt) (S, error) {
-	bot.chalk.Task(ctx, "Reflect (%d attempts)", bot.attempts)
-
 	s := input
-	for i := range bot.attempts {
-		bot.chalk.Task(bot.chalk.Sub(ctx), "attempt %d of %d", i+1, bot.attempts)
-
-		v, err := bot.judge.Prompt(bot.chalk.Sub(ctx), s, opt...)
+	for range bot.attempts {
+		v, err := bot.judge.Prompt(ctx, s, opt...)
 		if err != nil {
-			bot.chalk.Fail(err)
 			return *new(S), err
 		}
 
 		switch {
 		case v.accepted > 0:
-			bot.chalk.Done()
-			bot.chalk.Done()
 			return v.State, nil
 
 		case v.accepted < 0:
-			bot.chalk.Done()
 			err := fmt.Errorf("rejected")
-			bot.chalk.Fail(err)
 			return v.State, err
 		}
 
 		// neutral: v.State carries the critique — forward to corrector
-		s, err = bot.correct(bot.chalk.Sub(ctx), v.State, opt...)
+		s, err = bot.correct(ctx, v.State, opt...)
 		if err != nil {
-			bot.chalk.Done()
-			bot.chalk.Fail(err)
 			return s, err
 		}
-
-		bot.chalk.Done()
 	}
 
 	err := fmt.Errorf("rejected")
-	bot.chalk.Fail(err)
 	return s, err
 }
