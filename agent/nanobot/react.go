@@ -42,6 +42,7 @@ type BotReAct[A, B any] struct {
 	prompt   *prompt.Prompt
 	t        *template.Template
 	taskf    func(A) string
+	donef    func(B) string
 }
 
 // ReAct is like NewReAct but panics on error.
@@ -132,8 +133,11 @@ func (bot *BotReAct[A, B]) WithTask(name string) *BotReAct[A, B] {
 	return bot.WithTaskf(func(A) string { return name })
 }
 
-func (bot *BotReAct[A, B]) WithTaskf(fn func(A) string) *BotReAct[A, B] {
-	bot.taskf = fn
+func (bot *BotReAct[A, B]) WithTaskf(taskf func(A) string, donef ...func(B) string) *BotReAct[A, B] {
+	bot.taskf = taskf
+	if len(donef) > 0 {
+		bot.donef = donef[0]
+	}
 	return bot
 }
 
@@ -157,7 +161,12 @@ func (bot *BotReAct[A, B]) Prompt(ctx context.Context, input A, opt ...chatter.O
 		chalk.Fail(err)
 		return val, err
 	}
-	chalk.Done()
+
+	if bot.donef != nil {
+		chalk.Done(bot.donef(val))
+	} else {
+		chalk.Done()
+	}
 
 	return val, nil
 }
