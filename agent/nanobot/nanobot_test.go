@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"testing/fstest"
 
 	"github.com/fogfish/it/v2"
 	"github.com/kshard/chatter"
@@ -66,9 +67,15 @@ type MockChalk struct {
 	tasks  []string
 	dones  int
 	failed []error
+	subs   int
 }
 
-func (c *MockChalk) Sub(ctx context.Context) context.Context { return ctx }
+type chalkCtxKey struct{}
+
+func (c *MockChalk) Sub(ctx context.Context) context.Context {
+	c.subs++
+	return context.WithValue(ctx, chalkCtxKey{}, true)
+}
 func (c *MockChalk) Task(_ context.Context, format string, _ ...any) {
 	c.tasks = append(c.tasks, format)
 }
@@ -335,6 +342,60 @@ func TestWhen(t *testing.T) {
 			it.Equal(result.Result, "from-b"),
 			it.Equal(len(calls), 1),
 			it.Equal(calls[0], "B"),
+		)
+	})
+}
+
+// =============================================================================
+// TestWithTask
+// =============================================================================
+
+func TestArrWithTask(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		chalk := &MockChalk{}
+		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
+
+		arr := nanobot.Lift(func(ctx context.Context, w Work) (Work, error) {
+			if ok, _ := ctx.Value(chalkCtxKey{}).(bool); !ok {
+				t.Fatalf("expected chalk sub-context to be used")
+			}
+			w.Result = "done"
+			return w, nil
+		}).WithTask("arr-step")
+
+		result, err := arr.Prompt(ctx, Work{})
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(result.Result, "done"),
+			it.Equal(len(chalk.tasks), 1),
+			it.Equal(chalk.tasks[0], "arr-step"),
+			it.Equal(chalk.dones, 1),
+			it.Equal(len(chalk.failed), 0),
+			it.Equal(chalk.subs, 1),
+		)
+	})
+
+	t.Run("ErrorStillDone", func(t *testing.T) {
+		errArr := errors.New("arr error")
+		chalk := &MockChalk{}
+		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
+
+		arr := nanobot.Lift(func(ctx context.Context, w Work) (Work, error) {
+			if ok, _ := ctx.Value(chalkCtxKey{}).(bool); !ok {
+				t.Fatalf("expected chalk sub-context to be used")
+			}
+			return w, errArr
+		}).WithTask("arr-step")
+
+		_, err := arr.Prompt(ctx, Work{})
+		it.Then(t).ShouldNot(it.Nil(err))
+		it.Then(t).Should(
+			it.True(errors.Is(err, errArr)),
+			it.Equal(len(chalk.tasks), 1),
+			it.Equal(chalk.tasks[0], "arr-step"),
+			it.Equal(chalk.dones, 1),
+			it.Equal(len(chalk.failed), 0),
+			it.Equal(chalk.subs, 1),
 		)
 	})
 }
@@ -815,5 +876,62 @@ func TestJsonify(t *testing.T) {
 
 		_, err := bot.Prompt(context.Background(), "list fruits")
 		it.Then(t).ShouldNot(it.Nil(err))
+	})
+}
+
+// =============================================================================
+// TestReActWithTask
+// =============================================================================
+
+func TestReActWithTask(t *testing.T) {
+	newBot := func(t *testing.T, llm chatter.Chatter) *nanobot.BotReAct[Work, string] {
+		t.Helper()
+
+		fs := fstest.MapFS{
+			"react.prompt": &fstest.MapFile{
+				Data: []byte("Return {{.Result}}"),
+			},
+		}
+
+		bot, err := nanobot.NewReAct[Work, string](nanobot.NewRuntime(fs, &MockLLMs{
+			models: map[string]chatter.Chatter{"base": llm},
+		}), "react.prompt")
+		it.Then(t).Should(it.Nil(err))
+
+		return bot.WithTask("react-step")
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		chalk := &MockChalk{}
+		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
+		bot := newBot(t, &MockChatter{response: "final answer"})
+
+		result, err := bot.Prompt(ctx, Work{Result: "input"})
+		it.Then(t).Should(
+			it.Nil(err),
+			it.Equal(result, "final answer"),
+			it.Equal(len(chalk.tasks), 1),
+			it.Equal(chalk.tasks[0], "react-step"),
+			it.Equal(chalk.dones, 1),
+			it.Equal(len(chalk.failed), 0),
+		)
+	})
+
+	t.Run("FailureCallsFail", func(t *testing.T) {
+		errLLM := errors.New("llm failure")
+		chalk := &MockChalk{}
+		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
+		bot := newBot(t, &MockChatter{err: errLLM})
+
+		_, err := bot.Prompt(ctx, Work{Result: "input"})
+		it.Then(t).ShouldNot(it.Nil(err))
+		it.Then(t).Should(
+			it.True(errors.Is(err, errLLM)),
+			it.Equal(len(chalk.tasks), 1),
+			it.Equal(chalk.tasks[0], "react-step"),
+			it.Equal(chalk.dones, 0),
+			it.Equal(len(chalk.failed), 1),
+			it.True(errors.Is(chalk.failed[0], errLLM)),
+		)
 	})
 }

@@ -34,7 +34,6 @@ type Chalk interface {
 	Task(context.Context, string, ...any)
 	Done(...string)
 	Fail(error)
-	Printf(format string, args ...any)
 }
 
 // Bot is the core building block of the nanobot package. Any agent that
@@ -196,7 +195,7 @@ func (f Arr[S]) WithTask(name string) Arr[S] { return f.WithTaskf(func(S) string
 func (f Arr[S]) WithTaskf(fn func(S) string) Arr[S] {
 	return func(ctx context.Context, s S, opt ...chatter.Opt) (S, error) {
 		c, ok := ctx.Value(chalkboard).(Chalk)
-		if !ok || c == nil {
+		if !ok || c == nil || fn == nil {
 			return f(ctx, s, opt...)
 		}
 
