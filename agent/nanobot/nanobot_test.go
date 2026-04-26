@@ -353,6 +353,7 @@ func TestWhen(t *testing.T) {
 func TestArrWithTask(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		chalk := &MockChalk{}
+		//lint:ignore SA1029 We use string keys to allow zero-dep discovery
 		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
 
 		arr := nanobot.Lift(func(ctx context.Context, w Work) (Work, error) {
@@ -378,6 +379,7 @@ func TestArrWithTask(t *testing.T) {
 	t.Run("ErrorStillDone", func(t *testing.T) {
 		errArr := errors.New("arr error")
 		chalk := &MockChalk{}
+		//lint:ignore SA1029 We use string keys to allow zero-dep discovery
 		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
 
 		arr := nanobot.Lift(func(ctx context.Context, w Work) (Work, error) {
@@ -903,6 +905,7 @@ func TestReActWithTask(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		chalk := &MockChalk{}
+		//lint:ignore SA1029 We use string keys to allow zero-dep discovery
 		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
 		bot := newBot(t, &MockChatter{response: "final answer"})
 
@@ -920,6 +923,7 @@ func TestReActWithTask(t *testing.T) {
 	t.Run("FailureCallsFail", func(t *testing.T) {
 		errLLM := errors.New("llm failure")
 		chalk := &MockChalk{}
+		//lint:ignore SA1029 We use string keys to allow zero-dep discovery
 		ctx := context.WithValue(context.Background(), "io.console.chalkboard", chalk)
 		bot := newBot(t, &MockChatter{err: errLLM})
 
