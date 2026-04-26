@@ -10,8 +10,6 @@ package nanobot
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/kshard/chatter"
 )
@@ -66,7 +64,6 @@ type BotThinkReAct[S, T any] struct {
 	think  Bot[S, []T]
 	react  Arr[T]
 	gather func(S, []T) S
-	chalk  Chalk
 }
 
 // ThinkReAct creates a BotThinkReAct. Panics on error. If no gather function
@@ -94,7 +91,6 @@ func NewThinkReAct[S, T any](rt *Runtime, think Bot[S, []T], react Arr[T], gathe
 		think:  think,
 		react:  react,
 		gather: g,
-		chalk:  rt.Chalk,
 	}, nil
 }
 
@@ -107,25 +103,14 @@ func (bot *BotThinkReAct[S, T]) Prompt(ctx context.Context, input S, opt ...chat
 		return *new(S), err
 	}
 
-	bot.chalk.Task(ctx, "Execute (%d subtasks)", len(tasks))
 	results := make([]T, len(tasks))
 	for i, task := range tasks {
-		str := fmt.Sprintf("%v", task)
-		str = strings.ReplaceAll(str, "\n", " ")
-		if len(str) > 40 {
-			str = str[:37] + "..."
-		}
-		bot.chalk.Task(bot.chalk.Sub(ctx), "#%d %s", i+1, str)
-
 		t, err := bot.react(ctx, task, opt...)
 		if err != nil {
-			bot.chalk.Fail(err)
 			return *new(S), err
 		}
 		results[i] = t
-		bot.chalk.Done()
 	}
-	bot.chalk.Done()
 
 	return bot.gather(input, results), nil
 }
