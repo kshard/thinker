@@ -35,7 +35,7 @@ func TestHoist(t *testing.T) {
 		}
 
 		// Create a hoister using BiMap
-		hoister := nanobot.BiMap[Source, int, Target, string]()
+		hoister := nanobot.Codec[Source, Target, int, string]()
 
 		// Define an Arr[Target] that modifies the target
 		arrTarget := func(ctx context.Context, target Target, opt ...chatter.Opt) (Target, error) {
@@ -68,7 +68,7 @@ func TestHoist(t *testing.T) {
 			FieldB string
 		}
 
-		hoister := nanobot.BiMap[Source, int, Target, string]()
+		hoister := nanobot.Codec[Source, Target, int, string]()
 
 		// Arr[Target] that returns an error
 		testErr := errors.New("test error")
@@ -99,7 +99,7 @@ func TestHoist(t *testing.T) {
 			B bool
 		}
 
-		hoister := nanobot.BiMap[Source, float64, Target, bool]()
+		hoister := nanobot.Codec[Source, Target, float64, bool]()
 
 		arrTarget := func(ctx context.Context, target Target, opt ...chatter.Opt) (Target, error) {
 			target.A *= 2
