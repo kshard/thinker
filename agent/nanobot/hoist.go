@@ -20,37 +20,34 @@ import (
 // Hoist lifts an Arr[T] into Arr[S] by applying an isomorphism between S and T.
 type Hoister[S, T any] interface{ Hoist(Arr[T]) Arr[S] }
 
-// BiMap creates a partial morphism between S and T.
+// Codec creates a partial morphism between S and T.
 // It allows us to treat S and T as interchangeable for the purpose of applying Arr[T] to S.
-func BiMap[S, A, T, B any]() Hoister[S, T] {
-	return iso[S, A, T, B]{
-		sa: optics.ForProduct1[S, A](),
-		sb: optics.ForProduct1[S, B](),
-		ta: optics.ForProduct1[T, A](),
-		tb: optics.ForProduct1[T, B](),
-	}
+func Codec[S, T, A, B any]() Hoister[S, T] {
+	return iso[S, T]{iso: optics.CodecS1T1[S, T, A, B]()}
 }
 
-type iso[S, A, T, B any] struct {
-	sa optics.Lens[S, A]
-	sb optics.Lens[S, B]
-	ta optics.Lens[T, A]
-	tb optics.Lens[T, B]
+// Morph creates a partial morphism between S and T using a custom isomorphism.
+func Morph[S, T any](m optics.Isomorphism[S, T]) Hoister[S, T] {
+	return iso[S, T]{iso: m}
+}
+
+type iso[S, T any] struct {
+	iso optics.Isomorphism[S, T]
 }
 
 // Hoist lifts an Arr[T] into Arr[S] using the isomorphism defined by the iso struct.
-func (iso iso[S, A, T, B]) Hoist(arrT Arr[T]) Arr[S] {
+func (iso iso[S, T]) Hoist(arrT Arr[T]) Arr[S] {
 	return func(ctx context.Context, s S, opt ...chatter.Opt) (S, error) {
 		t := alloc[T]()
 
-		iso.ta.Put(&t, iso.sa.Get(&s))
+		iso.iso.Forward(&s, &t)
 
 		t, err := arrT(ctx, t, opt...)
 		if err != nil {
 			return s, err
 		}
 
-		iso.sb.Put(&s, iso.tb.Get(&t))
+		iso.iso.Inverse(&t, &s)
 		return s, nil
 	}
 }
