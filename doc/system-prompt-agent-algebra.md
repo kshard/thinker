@@ -15,7 +15,7 @@ ReAct[A, B]  — a primitive LLM agent (the only non-deterministic component)
 Pure(f)      — a deterministic agent: lifts f : S → M A into Bot[S, A] (no LLM call)
 ```
 
-### Bridging (Bot → Arr)
+### Bridging (Bot → Arr, Arr[T] → Arr[S])
 
 ```
 Lens[S, A]       — pure function S × A → S that writes A into S
@@ -23,6 +23,11 @@ Eval[S]          — effectful post-processing S ⇝ S (persistence, validation)
 Eff[S, A]        — Lens[S, A] × Eval[S] bundled together
 Arrow(bot, eff)  — lifts Bot[S, A] into Arr[S] by applying Eff
 Lift(eval)       — injects a pure Eval[S] into Arr[S] (no LLM call)
+
+BiMap[S, A, T, B] — constructs an isomorphism S ≅ T by sharing field A (input)
+                    copied from S into T, and field B (output) written back into S
+Hoist(iso, arrT)  — lifts Arr[T] into Arr[S] via iso: copies S.A → T.A,
+                    runs arrT, copies T.B → S.B; rest of S is untouched
 ```
 
 ### Structural Combinators
@@ -95,6 +100,7 @@ List any custom Lens, Eval, scatter (σ), or gather (γ) functions with their lo
 8. **Nest freely.** Reflect inside Seq, ThinkReAct inside Reflect, ThinkReAct inside ThinkReAct — the algebra is closed.
 9. **Name the blackboard fields.** Every intermediate result has a home in S. If you can't name where a result goes, the Lens is missing.
 10. **Minimize state.** Only put in S what downstream steps actually read. Transient per-task data belongs in T, not S.
+11. **Hoist for cross-state reuse.** When an existing `Arr[T]` pipeline can operate on a subset of `S`, use `Hoist(BiMap[S,A,T,B], arrT)` to embed it into `Arr[S]`. `BiMap` bridges the two blackboard types by copying the shared input field `A` from `S` into a fresh `T`, running the inner arrow, then writing the result field `B` back into `S`. The remainder of `S` is untouched. Use this to reuse sub-pipelines across differently-shaped blackboards without duplicating logic.
 
 ## Output Format
 

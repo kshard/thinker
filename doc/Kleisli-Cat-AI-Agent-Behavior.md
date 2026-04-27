@@ -12,8 +12,8 @@ categorical account of that intuition. We show that every agent
 behaviour — sequential composition, reflective self-correction, and plan-then-execute 
 — can be expressed as a morphism in the **Kleisli category** of
 the combined error-and-state monad. The resulting algebra has two primitive morphisms ($\text{ReAct}$ and
-$\text{Pure}$), three bridging concepts ($\text{Arr}$, $\text{Arrow}$,
-$\text{Eff}$), and three structural combinators ($\text{Seq}$,
+$\text{Pure}$), four bridging concepts ($\text{Arr}$, $\text{Arrow}$,
+$\text{Eff}$, $\text{Hoist}$), and three structural combinators ($\text{Seq}$,
 $\text{Reflect}$, $\text{ThinkReAct}$) that correspond directly to
 well-known patterns in multi-agent system design.
 
@@ -331,6 +331,75 @@ By left identity ($\eta(x) \mathbin{\gg\!=} k = k(x)$):
 $$= b(s) \mathbin{\gg\!=} \lambda a.\; \eta(f(s,\, g(s, a))) = \text{Map}(b,\; f \bullet g)(s) \quad\square$$
 
 
+### 3.8 Cross-Type Lifting: $\text{Hoist}$
+
+<!-- Note: section 3.8 requires better formal definition -->
+
+$\text{Arrow}$ bridges $\text{Bot}[S, A]$ and $\text{Arr}[S]$ within a
+single blackboard type. A complementary problem arises when an existing
+$\text{Arr}[T]$ pipeline — built for a different blackboard $T$ — must be
+embedded into $\text{Arr}[S]$. This is the *cross-type lifting* problem:
+how to reuse a finished sub-pipeline without duplicating it.
+
+The solution is a *partial isomorphism* between $S$ and $T$, defined by
+four lenses that share exactly two fields — one for input, one for output:
+
+$$\text{BiMap}[S, A, T, B] \;\triangleq\; (\ell_{SA},\, \ell_{TA},\, \ell_{TB},\, \ell_{SB})$$
+
+<!--
+where:
+- $\ell_{SA} : \text{Lens}[S, A]$ — extracts the *input* field $A$ from $S$
+- $\ell_{TA} : \text{Lens}[T, A]$ — writes the *input* field $A$ into a fresh $T$
+- $\ell_{TB} : \text{Lens}[T, B]$ — extracts the *output* field $B$ from the result $T$
+- $\ell_{SB} : \text{Lens}[S, B]$ — writes the *output* field $B$ back into $S$
+
+All four lenses are derived automatically from field positions when $S$ and
+$T$ are product types.
+-->
+
+$\text{Hoist}$ uses this isomorphism to lift $\text{Arr}[T]$ into
+$\text{Arr}[S]$:
+
+$$\text{Hoist} : \text{BiMap}[S, A, T, B] \times \text{Arr}[T] \to \text{Arr}[S]$$
+
+$$\text{Hoist}(\text{iso}, f)(s) \;\triangleq\; f\!\bigl(\ell_{TA}.\text{put}(\mathbf{0}_T,\; \ell_{SA}.\text{get}(s))\bigr) \mathbin{\gg\!=} \lambda t'.\; \eta\!\bigl(\ell_{SB}.\text{put}(s,\; \ell_{TB}.\text{get}(t'))\bigr)$$
+
+where $\mathbf{0}_T$ is the zero-value allocation of type $T$. The three
+steps are:
+1. **Inject** (pure): allocate $\mathbf{0}_T$ and copy $S$'s field $A$
+   into it via $\ell_{TA}$. The rest of $T$ is zero-initialised.
+2. **Run** (effectful): apply the inner arrow $f : \text{Arr}[T]$ to the
+   constructed $T$, which may perform LLM calls, tool invocations, or any
+   composed sub-pipeline.
+3. **Project** (pure): read field $B$ from the resulting $t'$ via
+   $\ell_{TB}$ and write it back into the original $s$ via $\ell_{SB}$.
+   All other fields of $S$ are preserved.
+
+**Lemma 3.9** (Hoist Well-Definedness). *For any
+$\text{iso} : \text{BiMap}[S, A, T, B]$ and $f : \text{Arr}[T]$,
+$\text{Hoist}(\text{iso}, f) : \text{Arr}[S]$.*
+
+*Proof.* $f : T \to M\,T$. The inject step produces a value of type $T$
+purely. Then $f$ applied to it yields $M\,T$. In the success branch,
+$\ell_{TB}.\text{get}(t') : B$ and
+$\ell_{SB}.\text{put}(s, \cdot) : B \to S$, so
+$\ell_{SB}.\text{put}(s, \ell_{TB}.\text{get}(t')) : S$.
+Wrapping with $\eta$ yields $M\,S$. The overall composition has type
+$S \to M\,S = \text{Arr}[S]$. $\square$
+
+**Lemma 3.10** (Hoist Preserves $S$). *All fields of $s : S$ except the
+$B$-component are unchanged by $\text{Hoist}(\text{iso}, f)(s)$.*
+
+*Proof.* The project step applies only $\ell_{SB}.\text{put}$, which
+modifies exactly the $B$-field of $s$ by the lens put-put law. Every other
+component of $s$ is carried unchanged from the inject step. $\square$
+
+$\text{Hoist}$ is the mechanism for reusing sub-pipelines across
+differently-shaped blackboards without code duplication. Because its result
+type is exactly $\text{Arr}[S]$, it composes freely with $\text{Seq}$,
+$\text{Reflect}$, and $\text{ThinkReAct}$.
+
+
 ## 4. Compositional Patterns
 
 ### 4.1 Sequential Composition: $\text{Seq}$
@@ -585,6 +654,7 @@ $$\begin{array}{ll}
 \quad\quad\quad\;\vdash\;\gamma : S \times [T] \to S & \text{— gather fold} \\
 \\
 \text{Lift}(e) & \text{— embed } \text{Eval}[S] \hookrightarrow \text{Arr}[S] \\
+\text{Hoist}(\text{iso}, f) & \text{— lift Arr}[T] \to \text{Arr}[S] \text{ via BiMap}[S,A,T,B] \\
 \text{Judge}(b, \varphi) & \text{— lift Bot}[S, A] \to \text{Bot}[S, \text{Vote}[S]] \\
 \text{Think}(b, \sigma) & \text{— transform Bot}[S, [A]] \to \text{Bot}[S, [T]] \\
 \text{Map}(b, f) & \text{— functor on output: Bot}[S, A] \to \text{Bot}[S, B]
@@ -731,7 +801,27 @@ $\varphi : \text{Eff}[\text{Vote}[S], A]$ encodes the decision policy
 separately, promoting reuse: the same underlying evaluator bot can serve
 different reflection policies by varying only $\varphi$.
 
-### 8.5 $\text{ReAct}$ and $\text{Pure}$: Two Modes of Bot Construction
+### 8.5 $\text{Hoist}$: Cross-Type Pipeline Reuse
+
+$\text{Arrow}$ and $\text{Lift}$ both embed computations *into* $\text{Arr}[S]$
+from below — from $\text{Bot}[S, A]$ or from $\text{Eval}[S]$. $\text{Hoist}$
+embeds from the *side*: it takes a finished $\text{Arr}[T]$ pipeline and
+integrates it into $\text{Arr}[S]$ without any knowledge of $T$'s internal
+structure beyond two lens fields.
+
+This is architecturally significant. A team may build a complete
+$\text{Arr}[T]$ pipeline for a focused sub-task (e.g. entity extraction,
+document classification) and then embed it into a larger orchestration
+blackboard $S$ by providing only the input/output field mapping
+$\text{BiMap}[S, A, T, B]$. The inner pipeline does not need to be rewritten;
+the outer pipeline does not need to know its internal structure.
+
+The inject/project steps in $\text{Hoist}$ (Lemma 3.10) ensure that the
+outer blackboard is *surgically* updated: only the designated output field
+$B$ changes. This is the cross-type analogue of the lens-based put operation
+that $\text{Arrow}$ uses within a single type.
+
+### 8.6 $\text{ReAct}$ and $\text{Pure}$: Two Modes of Bot Construction
 
 Every combinator in the hierarchy except $\text{ReAct}$ is a *deterministic*
 structural transformation: $\text{Arrow}$ applies a pure fold and a
@@ -768,8 +858,12 @@ The three structural combinators — $\text{Seq}$ (monoid composition),
 $\text{Reflect}$ (bounded iteration with $\text{Vote}$/$\text{Judge}$), and
 $\text{ThinkReAct}$ (cross-category transform/unfold traversal) — are derivable
 instances of standard categorical constructions. $\text{Lift}$,
-$\text{Judge}$, $\text{Think}$, and $\text{Map}$ are derived forms that
-improve ergonomics without extending the core.
+$\text{Hoist}$, $\text{Judge}$, $\text{Think}$, and $\text{Map}$ are derived
+forms that improve ergonomics without extending the core. In particular,
+$\text{Hoist}$ (§3.8) introduces a lens-based partial isomorphism
+$\text{BiMap}[S, A, T, B]$ that lifts any $\text{Arr}[T]$ into $\text{Arr}[S]$,
+enabling type-safe reuse of sub-pipelines across differently-shaped blackboards
+with surgical field-level coupling (Lemmas 3.9–3.10).
 
 All key properties — associativity of $\text{Seq}$ (Theorem 6.1), identity
 erasure (Corollary 6.2), functor laws for $\text{Map}$ (Theorem 6.4), and
