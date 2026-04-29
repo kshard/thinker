@@ -395,8 +395,8 @@ func TestArrWithTask(t *testing.T) {
 			it.True(errors.Is(err, errArr)),
 			it.Equal(len(chalk.tasks), 1),
 			it.Equal(chalk.tasks[0], "arr-step"),
-			it.Equal(chalk.dones, 1),
-			it.Equal(len(chalk.failed), 0),
+			it.Equal(chalk.dones, 0),
+			it.Equal(len(chalk.failed), 1),
 			it.Equal(chalk.subs, 1),
 		)
 	})
