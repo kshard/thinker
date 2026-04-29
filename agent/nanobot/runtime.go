@@ -200,14 +200,19 @@ func (f Arr[S]) WithTaskf(taskf func(S) string, donef ...func(S) string) Arr[S] 
 		}
 
 		c.Task(ctx, taskf(s))
-		defer func() {
-			if len(donef) > 0 && donef[0] != nil {
-				c.Done(donef[0](s))
-			} else {
-				c.Done()
-			}
-		}()
-		return f(c.Sub(ctx), s, opt...)
+		val, err := f(c.Sub(ctx), s, opt...)
+		if err != nil {
+			c.Fail(err)
+			return val, err
+		}
+
+		if len(donef) > 0 && donef[0] != nil {
+			c.Done(donef[0](s))
+		} else {
+			c.Done()
+		}
+
+		return val, err
 	}
 }
 
